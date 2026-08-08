@@ -1,10 +1,30 @@
 import type { ProgressEvent, TriageResult } from "./types";
 
-const API_BASE = import.meta.env.VITE_API_BASE ?? "";
+/**
+ * Resolve API / static fixture URLs against Vite base.
+ * Pages builds with `--base=./` so leading `/live-triage.json` would 404 on github.io root.
+ */
+function resolveBase(): string {
+  const override = import.meta.env.VITE_API_BASE as string | undefined;
+  if (override != null && override !== "") {
+    return override.replace(/\/$/, "");
+  }
+  const base = (import.meta.env.BASE_URL as string | undefined) ?? "/";
+  if (base === "/") return "";
+  return base.replace(/\/$/, "");
+}
+
+const API_BASE = resolveBase();
+
+function url(path: string): string {
+  const cleaned = path.startsWith("/") ? path.slice(1) : path;
+  if (!API_BASE) return `/${cleaned}`;
+  return `${API_BASE}/${cleaned}`;
+}
 
 export async function probeBackend(): Promise<boolean> {
   try {
-    const res = await fetch(`${API_BASE}/api/health`, { method: "GET" });
+    const res = await fetch(url("api/health"), { method: "GET" });
     return res.ok;
   } catch {
     return false;
@@ -14,7 +34,7 @@ export async function probeBackend(): Promise<boolean> {
 /** Pages ships a scheduled live-triage.json (no open API). */
 export async function probePublishedLive(): Promise<boolean> {
   try {
-    const res = await fetch(`${API_BASE}/live-triage.json`, { method: "GET" });
+    const res = await fetch(url("live-triage.json"), { method: "GET" });
     if (!res.ok) return false;
     const data = (await res.json()) as TriageResult;
     return Boolean(data?.findings?.length);
@@ -24,7 +44,7 @@ export async function probePublishedLive(): Promise<boolean> {
 }
 
 export async function loadPublishedLive(): Promise<TriageResult> {
-  const paths = [`${API_BASE}/live-triage.json`];
+  const paths = [url("live-triage.json")];
   let lastErr: Error | null = null;
   for (const path of paths) {
     try {
@@ -41,7 +61,7 @@ export async function loadPublishedLive(): Promise<TriageResult> {
 }
 
 export async function loadSampleTriage(): Promise<TriageResult> {
-  const paths = [`${API_BASE}/sample-triage.json`, `${API_BASE}/api/triage/sample`];
+  const paths = [url("sample-triage.json"), url("api/triage/sample")];
   let lastErr: Error | null = null;
   for (const path of paths) {
     try {
@@ -57,7 +77,7 @@ export async function loadSampleTriage(): Promise<TriageResult> {
 
 export async function fetchLatestLive(): Promise<TriageResult | null> {
   try {
-    const res = await fetch(`${API_BASE}/api/triage/latest`);
+    const res = await fetch(url("api/triage/latest"));
     if (res.status === 404) return null;
     if (!res.ok) throw new Error(`Latest live failed (${res.status})`);
     const data = (await res.json()) as TriageResult;
@@ -68,7 +88,7 @@ export async function fetchLatestLive(): Promise<TriageResult | null> {
 }
 
 export async function startTriage(forceRefresh = false): Promise<string> {
-  const res = await fetch(`${API_BASE}/api/triage/run`, {
+  const res = await fetch(url("api/triage/run"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ force_refresh: forceRefresh }),
@@ -79,7 +99,7 @@ export async function startTriage(forceRefresh = false): Promise<string> {
 }
 
 export async function cancelTriage(jobId: string): Promise<void> {
-  await fetch(`${API_BASE}/api/triage/${jobId}/cancel`, { method: "POST" });
+  await fetch(url(`api/triage/${jobId}/cancel`), { method: "POST" });
 }
 
 export function subscribeProgress(
@@ -88,7 +108,7 @@ export function subscribeProgress(
   onDone: () => void,
   onError?: (err: Error) => void
 ): () => void {
-  const es = new EventSource(`${API_BASE}/api/triage/${jobId}/events`);
+  const es = new EventSource(url(`api/triage/${jobId}/events`));
   es.addEventListener("progress", (msg) => {
     try {
       const data = JSON.parse((msg as MessageEvent).data) as ProgressEvent;
@@ -108,7 +128,7 @@ export function subscribeProgress(
 }
 
 export async function fetchResult(jobId: string): Promise<TriageResult> {
-  const res = await fetch(`${API_BASE}/api/triage/${jobId}/result`);
+  const res = await fetch(url(`api/triage/${jobId}/result`));
   if (!res.ok) throw new Error(`Result not ready (${res.status})`);
   return (await res.json()) as TriageResult;
 }
