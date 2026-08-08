@@ -240,6 +240,26 @@ export function Layout({
             </div>
           </div>
           <div className="panel-body">
+            <aside className="intro-brief" aria-label="What this is">
+              <p className="intro-brief-lead">
+                Public CVE intel for IBM i, AIX, Linux on Power, and z/OS — curated into Apply /
+                Contain / Monitor so GRC and systems share one work queue. Not a scanner of record.
+              </p>
+              <ul className="intro-brief-points">
+                <li>
+                  <strong>Feeds</strong> Scheduled public snapshot on Pages (or local live when the
+                  API is up)
+                </li>
+                <li>
+                  <strong>Route</strong> Optional shop answers re-weight this tab only — never leave
+                  the browser
+                </li>
+                <li>
+                  <strong>Work</strong> Open a finding for Resolve (bulletin / PTF) and Interim
+                  controls
+                </li>
+              </ul>
+            </aside>
             {result?.mode === "sample" && (
               <FlagshipWalkthrough
                 finding={flagship}
@@ -266,7 +286,7 @@ export function Layout({
                 onFixture={onSample}
               />
             )}
-            {liveError && !result && !liveRunning && (
+            {liveError && !result && !liveRunning && !sampleLoading && !publishedLoading && (
               <LiveFailCallout
                 message={liveError}
                 onRetry={() => {
@@ -280,6 +300,12 @@ export function Layout({
                   onSample();
                 }}
               />
+            )}
+            {(sampleLoading || publishedLoading) && !result && !liveRunning && (
+              <div className="empty-state callout" role="status">
+                <strong>{publishedLoading ? "Loading published feeds…" : "Loading sample…"}</strong>
+                <p className="callout-muted">Pulling the curated queue into this tab.</p>
+              </div>
             )}
             {emptyLive && !liveRunning && (
               <div className="empty-state callout">
@@ -312,7 +338,11 @@ export function Layout({
                 </div>
               </div>
             )}
-            {!result && !liveRunning && !sampleLoading && !publishedLoading && !liveError && (
+            {!result &&
+              !liveRunning &&
+              !sampleLoading &&
+              !publishedLoading &&
+              !liveError && (
               <div className="empty-state callout">
                 Nothing loaded yet.
                 <div className="callout-actions">
@@ -333,13 +363,10 @@ export function Layout({
                       Open published feeds
                     </button>
                   ) : (
-                    <button type="button" className="button button-primary" onClick={onStartIntake}>
-                      Route my queue
+                    <button type="button" className="button button-primary" onClick={onSample}>
+                      Load sample
                     </button>
                   )}
-                  <button type="button" className="button" onClick={onSample}>
-                    Curated fixture
-                  </button>
                 </div>
               </div>
             )}

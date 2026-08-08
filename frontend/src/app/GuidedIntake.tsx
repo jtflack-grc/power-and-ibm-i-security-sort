@@ -81,8 +81,8 @@ export function GuidedIntake({ initial, livePreferred = false, onComplete, onSki
           <h1>Route your queue</h1>
           <p className="welcome-lead">
             {livePreferred
-              ? "Four answers re-weight the published or live feed in this tab — then we open that queue. Platform chips stay on All so you can drill in."
-              : "Four answers stay in this browser tab. Platform chips stay on All so you can drill in. With no published feeds, the curated fixture loads next."}
+              ? "Four answers re-weight the queue already loading in this tab. Platform chips stay on All so you can drill in."
+              : "Four answers stay in this browser tab. Platform chips stay on All so you can drill in."}
           </p>
           <div className="intake-bar" aria-hidden>
             <div style={{ transform: `scaleX(${progress / 100})` }} />
@@ -248,7 +248,7 @@ export function GuidedIntake({ initial, livePreferred = false, onComplete, onSki
                 Skip paste
               </button>
               <button type="button" className="button button-primary" onClick={() => finish(true)}>
-                {livePreferred ? "Open feeds" : "Open fixture"}
+                Apply route
               </button>
             </>
           ) : (

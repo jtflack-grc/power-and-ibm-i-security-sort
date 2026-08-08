@@ -21,8 +21,6 @@ import {
 import type { Platform, ProgressEvent, TriageResult } from "./types";
 import "./index.css";
 
-type Gate = "welcome" | "intake" | "app";
-
 export default function App() {
   const [rawResult, setRawResult] = useState<TriageResult | null>(null);
   const [pendingLiveResult, setPendingLiveResult] = useState<TriageResult | null>(null);
@@ -34,7 +32,7 @@ export default function App() {
   const [progress, setProgress] = useState<ProgressEvent[]>([]);
   const [liveStartedAt, setLiveStartedAt] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [gate, setGate] = useState<Gate>("welcome");
+  const [showIntake, setShowIntake] = useState(false);
   const [backendAvailable, setBackendAvailable] = useState(false);
   const [publishedAvailable, setPublishedAvailable] = useState(false);
   const [shop, setShop] = useState<ShopContext>(() => loadShopContext());
@@ -42,16 +40,10 @@ export default function App() {
   const liveJobRef = useRef<string | null>(null);
   const stopLiveRef = useRef<(() => void) | null>(null);
   const rawResultRef = useRef<TriageResult | null>(null);
+  const bootStartedRef = useRef(false);
   rawResultRef.current = rawResult;
 
   const feedsPreferred = backendAvailable || publishedAvailable;
-
-  useEffect(() => {
-    void Promise.all([probeBackend(), probePublishedLive()]).then(([backend, published]) => {
-      setBackendAvailable(backend);
-      setPublishedAvailable(published);
-    });
-  }, []);
 
   useEffect(() => {
     saveShopContext(shop);
@@ -62,27 +54,14 @@ export default function App() {
     [rawResult, shop]
   );
 
-  const ensureSample = useCallback(async () => {
-    if (rawResultRef.current) return;
-    setSampleLoading(true);
-    try {
-      const data = await loadSampleTriage();
-      setRawResult({ ...data, mode: data.mode ?? "sample" });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Sample load failed");
-    } finally {
-      setSampleLoading(false);
-    }
-  }, []);
-
   const onPublished = useCallback(async () => {
     setError(null);
-    setGate("app");
     setPendingLiveResult(null);
     setPublishedLoading(true);
     try {
       const data = await loadPublishedLive();
       setRawResult({ ...data, mode: "live" });
+      setPublishedAvailable(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Published live load failed");
     } finally {
@@ -92,7 +71,6 @@ export default function App() {
 
   const onSample = useCallback(async () => {
     setError(null);
-    setGate("app");
     setPendingLiveResult(null);
     setSampleLoading(true);
     try {
@@ -139,12 +117,13 @@ export default function App() {
       if (!backendAvailable) {
         if (publishedAvailable) {
           await onPublished();
+        } else {
+          await onSample();
         }
         return;
       }
       if (liveRunning) return;
       setError(null);
-      setGate("app");
       setPendingLiveResult(null);
       setProgress([]);
       setLiveRunning(true);
@@ -152,8 +131,6 @@ export default function App() {
       setRefreshingCached(false);
       refreshingCachedRef.current = false;
 
-      // Instant path: last successful live on disk. Never auto-seed the curated fixture —
-      // that is opt-in so Live / Route don't silently become "sample mode".
       if (!force) {
         const latest = await fetchLatestLive();
         if (latest?.findings?.length) {
@@ -217,8 +194,154 @@ export default function App() {
         setRefreshingCached(false);
       }
     },
-    [backendAvailable, publishedAvailable, liveRunning, onPublished, stopLiveSubscription]
+    [backendAvailable, publishedAvailable, liveRunning, onPublished, onSample, stopLiveSubscription]
   );
+
+  // Boot straight into data — no welcome gate.
+  useEffect(() => {
+    if (bootStartedRef.current) return;
+    bootStartedRef.current = true;
+    let cancelled = false;
+
+    void (async () => {
+      const [backend, published] = await Promise.all([probeBackend(), probePublishedLive()]);
+      if (cancelled) return;
+      setBackendAvailable(backend);
+      setPublishedAvailable(published);
+
+      if (backend) {
+        setError(null);
+        setProgress([]);
+        setLiveRunning(true);
+        setLiveStartedAt(Date.now());
+        try {
+          const latest = await fetchLatestLive();
+          if (cancelled) return;
+          if (latest?.findings?.length) {
+            setRawResult(latest);
+            refreshingCachedRef.current = true;
+            setRefreshingCached(true);
+            setProgress([
+              {
+                stage: "cache",
+                message: "Showing last live snapshot — refreshing feeds in background…",
+                pct: 8,
+                detail: {},
+              },
+            ]);
+          }
+          const jobId = await startTriage(false);
+          if (cancelled) return;
+          liveJobRef.current = jobId;
+          await new Promise<void>((resolve, reject) => {
+            const stop = subscribeProgress(
+              jobId,
+              (ev) => setProgress((prev) => [...prev, ev]),
+              async () => {
+                try {
+                  const data = await fetchResult(jobId);
+                  if (!cancelled) {
+                    const live = { ...data, mode: "live" as const };
+                    const cancelledRun =
+                      data.notes?.some((n) => n.toLowerCase().includes("cancelled")) ||
+                      data.feed_health?.some((h) => h.detail === "cancelled");
+                    if (!cancelledRun) setRawResult(live);
+                  }
+                  resolve();
+                } catch (err) {
+                  reject(err);
+                } finally {
+                  stop();
+                  stopLiveRef.current = null;
+                  liveJobRef.current = null;
+                  setLiveRunning(false);
+                  setLiveStartedAt(null);
+                  refreshingCachedRef.current = false;
+                  setRefreshingCached(false);
+                }
+              }
+            );
+            stopLiveRef.current = stop;
+          });
+        } catch (err) {
+          if (!cancelled) {
+            setError(err instanceof Error ? err.message : "Triage failed");
+            setLiveRunning(false);
+            setLiveStartedAt(null);
+            // Fall through to published/sample below if boot live failed empty
+            if (!rawResultRef.current) {
+              if (published) {
+                setPublishedLoading(true);
+                try {
+                  const data = await loadPublishedLive();
+                  if (!cancelled) setRawResult({ ...data, mode: "live" });
+                } catch (pubErr) {
+                  if (!cancelled) {
+                    setError(pubErr instanceof Error ? pubErr.message : "Load failed");
+                  }
+                } finally {
+                  setPublishedLoading(false);
+                }
+              } else {
+                setSampleLoading(true);
+                try {
+                  const data = await loadSampleTriage();
+                  if (!cancelled) setRawResult({ ...data, mode: data.mode ?? "sample" });
+                } catch (sampleErr) {
+                  if (!cancelled) {
+                    setError(sampleErr instanceof Error ? sampleErr.message : "Sample load failed");
+                  }
+                } finally {
+                  setSampleLoading(false);
+                }
+              }
+            }
+          }
+        }
+        return;
+      }
+
+      if (published) {
+        setPublishedLoading(true);
+        try {
+          const data = await loadPublishedLive();
+          if (!cancelled) setRawResult({ ...data, mode: "live" });
+        } catch (err) {
+          if (!cancelled) {
+            setError(err instanceof Error ? err.message : "Published live load failed");
+            setSampleLoading(true);
+            try {
+              const data = await loadSampleTriage();
+              if (!cancelled) setRawResult({ ...data, mode: data.mode ?? "sample" });
+            } catch (sampleErr) {
+              if (!cancelled) {
+                setError(sampleErr instanceof Error ? sampleErr.message : "Sample load failed");
+              }
+            } finally {
+              setSampleLoading(false);
+            }
+          }
+        } finally {
+          if (!cancelled) setPublishedLoading(false);
+        }
+        return;
+      }
+
+      setSampleLoading(true);
+      try {
+        const data = await loadSampleTriage();
+        if (!cancelled) setRawResult({ ...data, mode: data.mode ?? "sample" });
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err.message : "Sample load failed");
+      } finally {
+        if (!cancelled) setSampleLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const applyPending = useCallback(() => {
     if (pendingLiveResult) {
@@ -233,37 +356,20 @@ export default function App() {
 
   const startIntake = useCallback(() => {
     setError(null);
-    setGate("intake");
+    setShowIntake(true);
   }, []);
 
-  const finishIntake = useCallback(
-    (ctx: ShopContext) => {
-      setShop(ctx);
-      setPlatformFilter("all");
-      setGate("app");
-      if (backendAvailable) {
-        void onRun(false);
-      } else if (publishedAvailable) {
-        void onPublished();
-      } else {
-        void ensureSample();
-      }
-    },
-    [backendAvailable, publishedAvailable, onRun, onPublished, ensureSample]
-  );
+  const finishIntake = useCallback((ctx: ShopContext) => {
+    setShop(ctx);
+    setPlatformFilter("all");
+    setShowIntake(false);
+  }, []);
 
   const skipIntake = useCallback(() => {
     setShop((prev) => ({ ...prev, enabled: false, routed: true, paste: null }));
     setPlatformFilter("all");
-    setGate("app");
-    if (backendAvailable) {
-      void onRun(false);
-    } else if (publishedAvailable) {
-      void onPublished();
-    } else {
-      void ensureSample();
-    }
-  }, [backendAvailable, publishedAvailable, onRun, onPublished, ensureSample]);
+    setShowIntake(false);
+  }, []);
 
   return (
     <>
@@ -292,82 +398,7 @@ export default function App() {
         liveError={error}
         onClearError={() => setError(null)}
       />
-      {gate === "welcome" && !liveRunning && !result && (
-        <div className="overlay">
-          <div className="overlay-card welcome-card">
-            <h1>Power System Vulnerability Curator</h1>
-            <p className="welcome-lead">
-              Public CVE intel for IBM i, AIX, Linux on Power, and z/OS — sorted so systems and
-              GRC can share one work queue.
-            </p>
-            <ul className="welcome-method">
-              <li>
-                <strong>Published feeds</strong> Scheduled public intel snapshot (Pages) or local
-                live refresh
-              </li>
-              <li>
-                <strong>Route</strong> A few answers re-weight that queue to your baileywick
-              </li>
-              <li>
-                <strong>Fixture</strong> Small curated set for offline walkthroughs
-              </li>
-            </ul>
-            <p className="welcome-honesty">
-              Portfolio demo. No API keys in the page. Shop answers and optional PSP paste stay in
-              this tab only. Not a scanner of record.
-            </p>
-            {error && <p style={{ color: "var(--danger)" }}>{error}</p>}
-            <div className="welcome-actions">
-              {backendAvailable ? (
-                <>
-                  <button
-                    type="button"
-                    className="button button-primary"
-                    onClick={() => onRun(false)}
-                  >
-                    Start live
-                  </button>
-                  <button type="button" className="button" onClick={startIntake}>
-                    Route, then live
-                  </button>
-                </>
-              ) : publishedAvailable ? (
-                <>
-                  <button
-                    type="button"
-                    className="button button-primary"
-                    onClick={() => void onPublished()}
-                    disabled={publishedLoading}
-                  >
-                    {publishedLoading ? "Loading feeds…" : "Open published feeds"}
-                  </button>
-                  <button type="button" className="button" onClick={startIntake}>
-                    Route, then feeds
-                  </button>
-                </>
-              ) : (
-                <button type="button" className="button button-primary" onClick={startIntake}>
-                  Route my queue
-                </button>
-              )}
-            </div>
-            <p className="welcome-alt">
-              {backendAvailable
-                ? "Backend offline later? "
-                : publishedAvailable
-                  ? "Want the short walkthrough? "
-                  : "Published feeds refresh on a schedule. Meanwhile, "}
-              <button type="button" className="linkish" onClick={() => void onSample()}>
-                open the curated fixture
-              </button>
-              {backendAvailable || publishedAvailable
-                ? " — offline walkthrough with the flagship CVE."
-                : "."}
-            </p>
-          </div>
-        </div>
-      )}
-      {gate === "intake" && (
+      {showIntake && (
         <GuidedIntake
           initial={shop}
           livePreferred={feedsPreferred}

@@ -894,6 +894,40 @@ a {
   max-width: 640px;
 }
 
+.intro-brief {
+  margin: 0 0 0.85rem;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--green);
+  background: color-mix(in srgb, var(--panel) 88%, var(--green) 12%);
+}
+
+.intro-brief-lead {
+  margin: 0 0 0.55rem;
+  color: var(--white);
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
+.intro-brief-points {
+  margin: 0;
+  padding-left: 1.05rem;
+  display: grid;
+  gap: 0.28rem;
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.4;
+}
+
+.intro-brief-points strong {
+  color: var(--green);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.74rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-right: 0.3rem;
+}
+
 .welcome-lead {
   font-size: 1.02rem;
   color: var(--white) !important;
