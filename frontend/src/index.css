@@ -901,6 +901,24 @@ a {
   max-width: 640px;
 }
 
+.about-kicker {
+  margin: 0 0 0.35rem;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--green);
+}
+
+.about-card .welcome-lead strong {
+  color: var(--white);
+  font-weight: 600;
+}
+
+.about-card .welcome-actions .button-primary {
+  text-decoration: none;
+}
+
 .intro-brief {
   margin: 0 0 0.85rem;
   padding: 0.85rem 0.95rem;

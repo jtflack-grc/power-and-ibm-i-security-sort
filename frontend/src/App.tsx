@@ -11,6 +11,7 @@ import {
   subscribeProgress,
 } from "./api";
 import { GuidedIntake } from "./app/GuidedIntake";
+import { AboutOverlay, hasSeenIntro } from "./app/AboutOverlay";
 import { Layout } from "./app/Layout";
 import {
   applyShopContext,
@@ -33,6 +34,8 @@ export default function App() {
   const [liveStartedAt, setLiveStartedAt] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showIntake, setShowIntake] = useState(false);
+  const [showIntro, setShowIntro] = useState(() => !hasSeenIntro());
+  const [showCredits, setShowCredits] = useState(false);
   const [backendAvailable, setBackendAvailable] = useState(false);
   const [publishedAvailable, setPublishedAvailable] = useState(false);
   const [shop, setShop] = useState<ShopContext>(() => loadShopContext());
@@ -356,7 +359,21 @@ export default function App() {
 
   const startIntake = useCallback(() => {
     setError(null);
+    setShowCredits(false);
+    setShowIntro(false);
     setShowIntake(true);
+  }, []);
+
+  const openCredits = useCallback(() => {
+    setShowIntake(false);
+    setShowIntro(false);
+    setShowCredits(true);
+  }, []);
+
+  const replayIntro = useCallback(() => {
+    setShowCredits(false);
+    setShowIntake(false);
+    setShowIntro(true);
   }, []);
 
   const finishIntake = useCallback((ctx: ShopContext) => {
@@ -395,9 +412,20 @@ export default function App() {
         platformFilter={platformFilter}
         onPlatformFilter={setPlatformFilter}
         onStartIntake={startIntake}
+        onOpenCredits={openCredits}
         liveError={error}
         onClearError={() => setError(null)}
       />
+      {showIntro && (
+        <AboutOverlay mode="intro" onClose={() => setShowIntro(false)} />
+      )}
+      {showCredits && (
+        <AboutOverlay
+          mode="credits"
+          onClose={() => setShowCredits(false)}
+          onReplayIntro={replayIntro}
+        />
+      )}
       {showIntake && (
         <GuidedIntake
           initial={shop}

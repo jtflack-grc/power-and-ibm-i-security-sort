@@ -37,6 +37,7 @@ interface Props {
   platformFilter: Platform | "all";
   onPlatformFilter: (p: Platform | "all") => void;
   onStartIntake: () => void;
+  onOpenCredits?: () => void;
   liveError?: string | null;
   onClearError?: () => void;
 }
@@ -76,6 +77,7 @@ export function Layout({
   platformFilter,
   onPlatformFilter,
   onStartIntake,
+  onOpenCredits,
   liveError = null,
   onClearError,
 }: Props) {
@@ -165,6 +167,11 @@ export function Layout({
           >
             {sampleLoading ? "Loading sample…" : "Load sample"}
           </button>
+          {onOpenCredits && (
+            <button type="button" className="button" onClick={onOpenCredits}>
+              Credits
+            </button>
+          )}
           {publishedAvailable && !backendAvailable && (
             <button
               type="button"
@@ -240,26 +247,11 @@ export function Layout({
             </div>
           </div>
           <div className="panel-body">
-            <aside className="intro-brief" aria-label="What this is">
+            <aside className="intro-brief" aria-label="Queue focus">
               <p className="intro-brief-lead">
-                Public CVE intel for IBM i, AIX, Linux on Power, and z/OS — curated into Apply /
-                Contain / Monitor so GRC and systems share one work queue. Opens on a focused modern
-                rail (museum CVEs stay out unless you ask). Not a scanner of record.
+                Focused modern rail — museum CVEs stay out unless you include older findings. Not a
+                scanner of record.
               </p>
-              <ul className="intro-brief-points">
-                <li>
-                  <strong>Feeds</strong> Scheduled public snapshot on Pages (or local live when the
-                  API is up)
-                </li>
-                <li>
-                  <strong>Route</strong> Optional shop answers re-weight this tab only — never leave
-                  the browser
-                </li>
-                <li>
-                  <strong>Work</strong> Open a finding for Resolve (bulletin / PTF) and Interim
-                  controls
-                </li>
-              </ul>
             </aside>
             {result?.mode === "sample" && (
               <FlagshipWalkthrough
