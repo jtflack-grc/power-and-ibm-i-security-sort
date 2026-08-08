@@ -378,25 +378,32 @@ def apply_levers(finding: Finding, cfg: RankerConfig | None = None) -> Finding:
             )
 
     # --- Freshness vs stale-without-signal ---
+    # Recent boost may use last_modified (NVD churn). Museum / stale demotion must
+    # use *published* age — otherwise 2009 CVEs with 2026 last_modified look "fresh".
     now = datetime.now(timezone.utc)
-    pub = _parse_dt(finding.published) or _parse_dt(finding.last_modified)
-    if pub is not None:
-        age_days = max(0, (now - pub).days)
-        if age_days <= cfg.recent_days:
+    published_dt = _parse_dt(finding.published)
+    activity_dt = _parse_dt(finding.last_modified) or published_dt
+    if activity_dt is not None:
+        activity_days = max(0, (now - activity_dt).days)
+        if activity_days <= cfg.recent_days:
             levers.append(
                 Lever(
                     id="freshness_recent",
                     source="NVD chronology",
                     direction=LeverDirection.UP,
                     weight=cfg.recent_boost,
-                    reason=f"Published/modified within {cfg.recent_days} days ({age_days}d).",
-                    evidence={"age_days": age_days},
+                    reason=f"Published/modified within {cfg.recent_days} days ({activity_days}d).",
+                    evidence={"age_days": activity_days},
                 )
             )
-        elif (
+
+    if published_dt is not None:
+        age_days = max(0, (now - published_dt).days)
+        if (
             age_days >= cfg.stale_days
             and not finding.on_kev
             and (finding.epss is None or finding.epss <= cfg.epss_cold)
+            and age_days < cfg.ancient_days
         ):
             levers.append(
                 Lever(
@@ -405,20 +412,16 @@ def apply_levers(finding: Finding, cfg: RankerConfig | None = None) -> Finding:
                     direction=LeverDirection.DOWN,
                     weight=cfg.stale_temper,
                     reason=(
-                        f"Stale ({age_days}d) with no KEV and cold/missing EPSS — "
+                        f"Stale publication age ({age_days}d) with no KEV and cold/missing EPSS — "
                         "deprioritize vs lived threats (still reviewable)."
                     ),
                     evidence={"age_days": age_days, "epss": finding.epss},
                 )
             )
 
-        # Counter-lever against "antique but still hot EPSS" crowding the Urgent queue
-        # when there is no KEV and no IBM bulletin confirmation.
-        if (
-            age_days >= cfg.ancient_days
-            and not finding.on_kev
-            and finding.ibm_bulletin_status != "confirmed"
-        ):
+        # Museum CVEs: published age only. PSIRT confirmation does not keep them in
+        # the modern lead queue — only CISA KEV overrides.
+        if age_days >= cfg.ancient_days and not finding.on_kev:
             levers.append(
                 Lever(
                     id="ancient_unconfirmed_temper",
@@ -426,10 +429,13 @@ def apply_levers(finding: Finding, cfg: RankerConfig | None = None) -> Finding:
                     direction=LeverDirection.DOWN,
                     weight=cfg.ancient_temper,
                     reason=(
-                        f"Ancient finding ({age_days}d) with no CISA KEV and no IBM PSIRT "
-                        "confirmation — temper so museum CVEs do not dominate modern Power triage."
+                        f"Museum publication age ({age_days}d) with no CISA KEV — "
+                        "demote so antique CVEs (even with PSIRT notes) do not lead modern triage."
                     ),
-                    evidence={"age_days": age_days},
+                    evidence={
+                        "age_days": age_days,
+                        "ibm_bulletin_status": finding.ibm_bulletin_status,
+                    },
                 )
             )
         elif (
@@ -455,8 +461,7 @@ def apply_levers(finding: Finding, cfg: RankerConfig | None = None) -> Finding:
     finding.score = round(sum(lev.weight for lev in levers), 2)
     finding.bucket = bucketize(finding, cfg)
 
-    # Hard demote: museum CVEs without KEV / PSIRT cannot lead Urgent or Watch,
-    # even when CVSS + hot EPSS still clear the numeric floors after tempering.
+    # Hard demote: museum publication age without KEV cannot lead Urgent or Watch.
     is_museum = any(lev.id == "ancient_unconfirmed_temper" for lev in levers)
     if is_museum and not finding.on_kev:
         finding.bucket = Bucket.LOW

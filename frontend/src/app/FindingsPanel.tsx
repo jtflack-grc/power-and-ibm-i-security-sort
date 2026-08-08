@@ -34,9 +34,10 @@ function shortDate(value?: string | null): string | null {
 }
 
 export function isMuseumFinding(f: Finding): boolean {
-  if (f.on_kev || f.ibm_bulletin_status === "confirmed") return false;
+  if (f.on_kev) return false;
   if (f.levers?.some((l) => l.id === "ancient_unconfirmed_temper")) return true;
-  const stamp = f.published || f.last_modified;
+  // Prefer published age — last_modified churn must not keep museum rows in the default rail.
+  const stamp = f.published;
   if (!stamp) return false;
   const t = new Date(stamp).getTime();
   if (Number.isNaN(t)) return false;

@@ -118,6 +118,28 @@ def test_ancient_seven_year_cutoff_hard_demotes():
     assert f.score < 35.0
 
 
+def test_ancient_psirt_confirmed_still_demoted():
+    """Published-age museum + PSIRT must not lead; last_modified churn cannot save it."""
+    f = Finding(
+        cve_id="CVE-2013-4002",
+        title="Old IBM with bulletin",
+        description="PSIRT confirmed but ancient publish date",
+        published="2013-07-23T00:00:00.000",
+        last_modified="2026-06-16T00:00:00.000",
+        cvss_score=9.0,
+        cvss_vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+        epss=0.2,
+        on_kev=False,
+        ibm_bulletin_status="confirmed",
+        ibm_bulletin_url="https://www.ibm.com/support/pages/node/1",
+        platforms=[PlatformHit(platform=Platform.IBM_I, match_strength="cpe")],
+    )
+    apply_levers(f)
+    assert any(l.id == "ancient_unconfirmed_temper" for l in f.levers)
+    assert f.bucket.value == "low"
+    assert f.score < 35.0
+
+
 def test_ancient_kev_still_urgent():
     f = Finding(
         cve_id="CVE-2014-0160",
