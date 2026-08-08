@@ -243,7 +243,8 @@ export function Layout({
             <aside className="intro-brief" aria-label="What this is">
               <p className="intro-brief-lead">
                 Public CVE intel for IBM i, AIX, Linux on Power, and z/OS — curated into Apply /
-                Contain / Monitor so GRC and systems share one work queue. Not a scanner of record.
+                Contain / Monitor so GRC and systems share one work queue. Opens on a focused modern
+                rail (museum CVEs stay out unless you ask). Not a scanner of record.
               </p>
               <ul className="intro-brief-points">
                 <li>

@@ -95,4 +95,39 @@ def test_ancient_temper_applies():
     apply_levers(f)
     assert any(l.id == "ancient_unconfirmed_temper" for l in f.levers)
     # High EPSS alone should not keep museum CVE glued to Urgent without KEV/PSIRT.
-    assert f.bucket.value in {"watch", "low"}
+    assert f.bucket.value == "low"
+
+
+def test_ancient_seven_year_cutoff_hard_demotes():
+    """~8yo unconfirmed museum CVE must not lead Urgent even with hot EPSS."""
+    f = Finding(
+        cve_id="CVE-2017-9999",
+        title="Aging museum",
+        description="Still scored hot on paper",
+        published="2017-01-01T00:00:00.000",
+        cvss_score=10.0,
+        cvss_vector="CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+        epss=0.97,
+        on_kev=False,
+        ibm_bulletin_status="unconfirmed",
+        platforms=[PlatformHit(platform=Platform.IBM_I, match_strength="cpe")],
+    )
+    apply_levers(f)
+    assert any(l.id == "ancient_unconfirmed_temper" for l in f.levers)
+    assert f.bucket.value == "low"
+    assert f.score < 35.0
+
+
+def test_ancient_kev_still_urgent():
+    f = Finding(
+        cve_id="CVE-2014-0160",
+        title="Heartbleed-class KEV",
+        description="Old but actively catalogued",
+        published="2014-04-07T00:00:00.000",
+        cvss_score=7.5,
+        on_kev=True,
+        ibm_bulletin_status="unconfirmed",
+        platforms=[PlatformHit(platform=Platform.LINUX_ON_POWER, match_strength="cpe")],
+    )
+    apply_levers(f)
+    assert f.bucket.value == "urgent"

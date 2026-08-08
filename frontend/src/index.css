@@ -322,6 +322,13 @@ a {
   margin: -0.25rem 0 0.55rem;
 }
 
+.findings-focus-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0 0 0.55rem;
+}
+
 .filter-hint {
   width: 100%;
   font-size: 0.78rem;

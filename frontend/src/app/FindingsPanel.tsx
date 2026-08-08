@@ -22,12 +22,26 @@ const PLATFORMS: Array<Platform | "all"> = [
   "zos",
   "linux_on_power",
 ];
+const FOCUS_LIMIT = 40;
+/** Match backend RankerConfig.ancient_days (~7y). */
+const MUSEUM_AGE_DAYS = 2555;
 
 function shortDate(value?: string | null): string | null {
   if (!value) return null;
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return null;
   return d.toISOString().slice(0, 10);
+}
+
+export function isMuseumFinding(f: Finding): boolean {
+  if (f.on_kev || f.ibm_bulletin_status === "confirmed") return false;
+  if (f.levers?.some((l) => l.id === "ancient_unconfirmed_temper")) return true;
+  const stamp = f.published || f.last_modified;
+  if (!stamp) return false;
+  const t = new Date(stamp).getTime();
+  if (Number.isNaN(t)) return false;
+  const ageDays = (Date.now() - t) / 86_400_000;
+  return ageDays >= MUSEUM_AGE_DAYS;
 }
 
 export function FindingsPanel({
@@ -41,6 +55,8 @@ export function FindingsPanel({
   pasteHitIds = [],
 }: Props) {
   const [bucket, setBucket] = useState<Bucket | "all">("all");
+  const [includeOlder, setIncludeOlder] = useState(false);
+  const [showAll, setShowAll] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
   const skipAutoScroll = useRef(true);
 
@@ -56,19 +72,56 @@ export function FindingsPanel({
       if (laneFilter !== "all" && (f.action_lane ?? "monitor") !== laneFilter) {
         return false;
       }
+      if (!includeOlder && isMuseumFinding(f)) {
+        // Keep paste matches and the current selection reachable.
+        if (selectedId === f.cve_id) return true;
+        if (pasteHitIds.includes(f.cve_id)) return true;
+        return false;
+      }
       return true;
     });
-  }, [findings, bucket, platformFilter, laneFilter]);
+  }, [findings, bucket, platformFilter, laneFilter, includeOlder, selectedId, pasteHitIds]);
+
+  const olderHidden = useMemo(() => {
+    if (includeOlder) return 0;
+    return findings.filter((f) => {
+      if (!isMuseumFinding(f)) return false;
+      if (selectedId === f.cve_id) return false;
+      if (pasteHitIds.includes(f.cve_id)) return false;
+      if (bucket !== "all" && f.bucket !== bucket) return false;
+      if (
+        platformFilter !== "all" &&
+        !f.platforms.some((p) => p.platform === platformFilter)
+      ) {
+        return false;
+      }
+      if (laneFilter !== "all" && (f.action_lane ?? "monitor") !== laneFilter) {
+        return false;
+      }
+      return true;
+    }).length;
+  }, [findings, includeOlder, selectedId, pasteHitIds, bucket, platformFilter, laneFilter]);
+
+  const visible = useMemo(() => {
+    if (showAll || filtered.length <= FOCUS_LIMIT) return filtered;
+    const head = filtered.slice(0, FOCUS_LIMIT);
+    if (selectedId && !head.some((f) => f.cve_id === selectedId)) {
+      const selected = filtered.find((f) => f.cve_id === selectedId);
+      if (selected) return [...head, selected];
+    }
+    return head;
+  }, [filtered, showAll, selectedId]);
 
   // New result or filter change: stay at the top of the findings panel.
   useEffect(() => {
     skipAutoScroll.current = true;
+    setShowAll(false);
     const root = listRef.current;
     if (!root) return;
     root.scrollTo({ top: 0 });
     const pane = root.closest(".panel-body");
     if (pane instanceof HTMLElement) pane.scrollTo({ top: 0 });
-  }, [findings, platformFilter, bucket, laneFilter]);
+  }, [findings, platformFilter, bucket, laneFilter, includeOlder]);
 
   // Only scroll a row into view after deliberate keyboard moves (not auto-select on load).
   useEffect(() => {
@@ -96,18 +149,18 @@ export function FindingsPanel({
       ref={listRef}
       tabIndex={0}
       onKeyDown={(e) => {
-        if (!filtered.length) return;
-        const idx = filtered.findIndex((f) => f.cve_id === selectedId);
+        if (!visible.length) return;
+        const idx = visible.findIndex((f) => f.cve_id === selectedId);
         if (e.key === "ArrowDown") {
           e.preventDefault();
-          const next = filtered[Math.min(filtered.length - 1, Math.max(0, idx) + 1)];
+          const next = visible[Math.min(visible.length - 1, Math.max(0, idx) + 1)];
           if (next) onSelect(next);
         } else if (e.key === "ArrowUp") {
           e.preventDefault();
-          const prev = filtered[Math.max(0, (idx < 0 ? 0 : idx) - 1)];
+          const prev = visible[Math.max(0, (idx < 0 ? 0 : idx) - 1)];
           if (prev) onSelect(prev);
         } else if (e.key === "Enter" && selectedId) {
-          const cur = filtered.find((f) => f.cve_id === selectedId);
+          const cur = visible.find((f) => f.cve_id === selectedId);
           if (cur) onSelect(cur);
         }
       }}
@@ -153,10 +206,32 @@ export function FindingsPanel({
           </button>
         </div>
       )}
-      <div className="filter-count">
-        Showing {filtered.length} of {findings.length} · ↑↓ to move
+      <div className="findings-focus-bar">
+        <button
+          type="button"
+          className={`chip ${includeOlder ? "active" : ""}`}
+          onClick={() => setIncludeOlder((v) => !v)}
+          title="Museum CVEs without KEV / PSIRT stay out of the default rail"
+        >
+          {includeOlder ? "Older included" : "Include older findings"}
+        </button>
+        {filtered.length > FOCUS_LIMIT && (
+          <button
+            type="button"
+            className={`chip ${showAll ? "active" : ""}`}
+            onClick={() => setShowAll((v) => !v)}
+          >
+            {showAll ? `Show top ${FOCUS_LIMIT}` : `Show all ${filtered.length}`}
+          </button>
+        )}
       </div>
-      {filtered.map((f) => {
+      <div className="filter-count">
+        Showing {visible.length} of {findings.length}
+        {!showAll && filtered.length > FOCUS_LIMIT ? ` · focus ${FOCUS_LIMIT}` : ""}
+        {olderHidden > 0 ? ` · ${olderHidden} older hidden` : ""}
+        {" · ↑↓ to move"}
+      </div>
+      {visible.map((f) => {
         const selected = selectedId === f.cve_id;
         const supply = f.risk_surface && f.risk_surface !== "platform";
         const published = shortDate(f.published);

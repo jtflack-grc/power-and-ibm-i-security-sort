@@ -89,7 +89,7 @@ class RankerConfig:
     stale_days: int = 730
     stale_temper: float = -12.0  # only if not KEV and EPSS cold/missing
     # Strong counter-lever: museum CVEs without active exploitation signal
-    ancient_days: int = 3650  # ~10 years
+    ancient_days: int = 2555  # ~7 years
     ancient_temper: float = -55.0
     # Mid-age without PSIRT confirmation
     aging_no_psirt_days: int = 1825  # ~5 years
@@ -454,6 +454,14 @@ def apply_levers(finding: Finding, cfg: RankerConfig | None = None) -> Finding:
     finding.levers = levers
     finding.score = round(sum(lev.weight for lev in levers), 2)
     finding.bucket = bucketize(finding, cfg)
+
+    # Hard demote: museum CVEs without KEV / PSIRT cannot lead Urgent or Watch,
+    # even when CVSS + hot EPSS still clear the numeric floors after tempering.
+    is_museum = any(lev.id == "ancient_unconfirmed_temper" for lev in levers)
+    if is_museum and not finding.on_kev:
+        finding.bucket = Bucket.LOW
+        finding.score = min(finding.score, cfg.watch_floor - 0.01)
+
     if not finding.nvd_url:
         # Prefer CVE.org — NVD HTML detail pages often 502/timeout in browsers.
         finding.nvd_url = f"https://www.cve.org/CVERecord?id={finding.cve_id}"
