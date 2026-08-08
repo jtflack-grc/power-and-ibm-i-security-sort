@@ -3,8 +3,10 @@ import {
   cancelTriage,
   fetchLatestLive,
   fetchResult,
+  loadPublishedLive,
   loadSampleTriage,
   probeBackend,
+  probePublishedLive,
   startTriage,
   subscribeProgress,
 } from "./api";
@@ -28,11 +30,13 @@ export default function App() {
   const [refreshingCached, setRefreshingCached] = useState(false);
   const refreshingCachedRef = useRef(false);
   const [sampleLoading, setSampleLoading] = useState(false);
+  const [publishedLoading, setPublishedLoading] = useState(false);
   const [progress, setProgress] = useState<ProgressEvent[]>([]);
   const [liveStartedAt, setLiveStartedAt] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [gate, setGate] = useState<Gate>("welcome");
-  const [liveAvailable, setLiveAvailable] = useState(false);
+  const [backendAvailable, setBackendAvailable] = useState(false);
+  const [publishedAvailable, setPublishedAvailable] = useState(false);
   const [shop, setShop] = useState<ShopContext>(() => loadShopContext());
   const [platformFilter, setPlatformFilter] = useState<Platform | "all">("all");
   const liveJobRef = useRef<string | null>(null);
@@ -40,8 +44,13 @@ export default function App() {
   const rawResultRef = useRef<TriageResult | null>(null);
   rawResultRef.current = rawResult;
 
+  const feedsPreferred = backendAvailable || publishedAvailable;
+
   useEffect(() => {
-    void probeBackend().then(setLiveAvailable);
+    void Promise.all([probeBackend(), probePublishedLive()]).then(([backend, published]) => {
+      setBackendAvailable(backend);
+      setPublishedAvailable(published);
+    });
   }, []);
 
   useEffect(() => {
@@ -63,6 +72,21 @@ export default function App() {
       setError(err instanceof Error ? err.message : "Sample load failed");
     } finally {
       setSampleLoading(false);
+    }
+  }, []);
+
+  const onPublished = useCallback(async () => {
+    setError(null);
+    setGate("app");
+    setPendingLiveResult(null);
+    setPublishedLoading(true);
+    try {
+      const data = await loadPublishedLive();
+      setRawResult({ ...data, mode: "live" });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Published live load failed");
+    } finally {
+      setPublishedLoading(false);
     }
   }, []);
 
@@ -112,6 +136,12 @@ export default function App() {
 
   const onRun = useCallback(
     async (force: boolean) => {
+      if (!backendAvailable) {
+        if (publishedAvailable) {
+          await onPublished();
+        }
+        return;
+      }
       if (liveRunning) return;
       setError(null);
       setGate("app");
@@ -187,7 +217,7 @@ export default function App() {
         setRefreshingCached(false);
       }
     },
-    [liveRunning, stopLiveSubscription]
+    [backendAvailable, publishedAvailable, liveRunning, onPublished, stopLiveSubscription]
   );
 
   const applyPending = useCallback(() => {
@@ -209,28 +239,31 @@ export default function App() {
   const finishIntake = useCallback(
     (ctx: ShopContext) => {
       setShop(ctx);
-      // Start on All platforms — shop answers re-weight; user drills chips themselves.
       setPlatformFilter("all");
       setGate("app");
-      if (liveAvailable) {
+      if (backendAvailable) {
         void onRun(false);
+      } else if (publishedAvailable) {
+        void onPublished();
       } else {
         void ensureSample();
       }
     },
-    [ensureSample, liveAvailable, onRun]
+    [backendAvailable, publishedAvailable, onRun, onPublished, ensureSample]
   );
 
   const skipIntake = useCallback(() => {
     setShop((prev) => ({ ...prev, enabled: false, routed: true, paste: null }));
     setPlatformFilter("all");
     setGate("app");
-    if (liveAvailable) {
+    if (backendAvailable) {
       void onRun(false);
+    } else if (publishedAvailable) {
+      void onPublished();
     } else {
       void ensureSample();
     }
-  }, [ensureSample, liveAvailable, onRun]);
+  }, [backendAvailable, publishedAvailable, onRun, onPublished, ensureSample]);
 
   return (
     <>
@@ -238,16 +271,19 @@ export default function App() {
         result={result}
         liveRunning={liveRunning}
         sampleLoading={sampleLoading}
+        publishedLoading={publishedLoading}
         progress={progress}
         liveStartedAt={liveStartedAt}
         pendingLive={Boolean(pendingLiveResult)}
         refreshingCached={refreshingCached}
         onRun={onRun}
         onSample={onSample}
+        onPublished={onPublished}
         onCancelLive={onCancelLive}
         onApplyPending={applyPending}
         onDismissPending={dismissPending}
-        liveAvailable={liveAvailable}
+        backendAvailable={backendAvailable}
+        publishedAvailable={publishedAvailable}
         shop={shop}
         onShopChange={setShop}
         platformFilter={platformFilter}
@@ -266,13 +302,14 @@ export default function App() {
             </p>
             <ul className="welcome-method">
               <li>
-                <strong>Live</strong> Pull public feeds; last snapshot shows while refresh runs
+                <strong>Published feeds</strong> Scheduled public intel snapshot (Pages) or local
+                live refresh
               </li>
               <li>
                 <strong>Route</strong> A few answers re-weight that queue to your baileywick
               </li>
               <li>
-                <strong>Fixture</strong> Offline curated set when live isn’t up
+                <strong>Fixture</strong> Small curated set for offline walkthroughs
               </li>
             </ul>
             <p className="welcome-honesty">
@@ -281,7 +318,7 @@ export default function App() {
             </p>
             {error && <p style={{ color: "var(--danger)" }}>{error}</p>}
             <div className="welcome-actions">
-              {liveAvailable ? (
+              {backendAvailable ? (
                 <>
                   <button
                     type="button"
@@ -294,6 +331,20 @@ export default function App() {
                     Route, then live
                   </button>
                 </>
+              ) : publishedAvailable ? (
+                <>
+                  <button
+                    type="button"
+                    className="button button-primary"
+                    onClick={() => void onPublished()}
+                    disabled={publishedLoading}
+                  >
+                    {publishedLoading ? "Loading feeds…" : "Open published feeds"}
+                  </button>
+                  <button type="button" className="button" onClick={startIntake}>
+                    Route, then feeds
+                  </button>
+                </>
               ) : (
                 <button type="button" className="button button-primary" onClick={startIntake}>
                   Route my queue
@@ -301,13 +352,17 @@ export default function App() {
               )}
             </div>
             <p className="welcome-alt">
-              {liveAvailable
+              {backendAvailable
                 ? "Backend offline later? "
-                : "Live needs the local FastAPI process. Meanwhile, "}
+                : publishedAvailable
+                  ? "Want the short walkthrough? "
+                  : "Published feeds refresh on a schedule. Meanwhile, "}
               <button type="button" className="linkish" onClick={() => void onSample()}>
                 open the curated fixture
               </button>
-              {liveAvailable ? " — offline walkthrough with the flagship CVE." : "."}
+              {backendAvailable || publishedAvailable
+                ? " — offline walkthrough with the flagship CVE."
+                : "."}
             </p>
           </div>
         </div>
@@ -315,7 +370,7 @@ export default function App() {
       {gate === "intake" && (
         <GuidedIntake
           initial={shop}
-          livePreferred={liveAvailable}
+          livePreferred={feedsPreferred}
           onComplete={finishIntake}
           onSkip={skipIntake}
         />

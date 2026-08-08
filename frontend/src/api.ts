@@ -11,6 +11,35 @@ export async function probeBackend(): Promise<boolean> {
   }
 }
 
+/** Pages ships a scheduled live-triage.json (no open API). */
+export async function probePublishedLive(): Promise<boolean> {
+  try {
+    const res = await fetch(`${API_BASE}/live-triage.json`, { method: "GET" });
+    if (!res.ok) return false;
+    const data = (await res.json()) as TriageResult;
+    return Boolean(data?.findings?.length);
+  } catch {
+    return false;
+  }
+}
+
+export async function loadPublishedLive(): Promise<TriageResult> {
+  const paths = [`${API_BASE}/live-triage.json`];
+  let lastErr: Error | null = null;
+  for (const path of paths) {
+    try {
+      const res = await fetch(path);
+      if (!res.ok) throw new Error(`Published live load failed (${res.status})`);
+      const data = (await res.json()) as TriageResult;
+      if (!data?.findings?.length) throw new Error("Published live snapshot is empty");
+      return { ...data, mode: "live" };
+    } catch (err) {
+      lastErr = err instanceof Error ? err : new Error(String(err));
+    }
+  }
+  throw lastErr ?? new Error("Published live snapshot unavailable");
+}
+
 export async function loadSampleTriage(): Promise<TriageResult> {
   const paths = [`${API_BASE}/sample-triage.json`, `${API_BASE}/api/triage/sample`];
   let lastErr: Error | null = null;

@@ -19,16 +19,19 @@ interface Props {
   result: TriageResult | null;
   liveRunning: boolean;
   sampleLoading: boolean;
+  publishedLoading?: boolean;
   progress: ProgressEvent[];
   liveStartedAt: number | null;
   pendingLive: boolean;
   refreshingCached?: boolean;
   onRun: (force: boolean) => void;
   onSample: () => void;
+  onPublished: () => void;
   onCancelLive: () => void;
   onApplyPending: () => void;
   onDismissPending: () => void;
-  liveAvailable: boolean;
+  backendAvailable: boolean;
+  publishedAvailable: boolean;
   shop: ShopContext;
   onShopChange: (ctx: ShopContext) => void;
   platformFilter: Platform | "all";
@@ -38,20 +41,36 @@ interface Props {
   onClearError?: () => void;
 }
 
+function formatStamp(iso?: string): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 export function Layout({
   result,
   liveRunning,
   sampleLoading,
+  publishedLoading = false,
   progress,
   liveStartedAt,
   pendingLive,
   refreshingCached = false,
   onRun,
   onSample,
+  onPublished,
   onCancelLive,
   onApplyPending,
   onDismissPending,
-  liveAvailable,
+  backendAvailable,
+  publishedAvailable,
   shop,
   onShopChange,
   platformFilter,
@@ -66,7 +85,17 @@ export function Layout({
   const [showFlagship, setShowFlagship] = useState(true);
 
   const findings = result?.findings ?? [];
-  const modeLabel = result?.mode === "live" ? "live feeds" : result ? "sample" : "idle";
+  const publishedStamp = formatStamp(result?.generated_at);
+  const modeLabel =
+    result?.mode === "live"
+      ? backendAvailable
+        ? "live feeds"
+        : publishedStamp
+          ? `published · ${publishedStamp}`
+          : "published feeds"
+      : result
+        ? "sample"
+        : "idle";
   const flagship =
     findings.find((f) => f.cve_id === (result?.flagship_cve || FLAGSHIP_CVE)) ?? null;
   const emptyLive = result?.mode === "live" && findings.length === 0;
@@ -91,8 +120,6 @@ export function Layout({
       if (prev && scopedFindings.some((f) => f.cve_id === prev.cve_id)) {
         return scopedFindings.find((f) => f.cve_id === prev.cve_id) ?? prev;
       }
-      // Always land on the top of the current rail. Shop/route re-weights ranking;
-      // platform chips stay "All" until the user drills in.
       return scopedFindings[0];
     });
   }, [scopedFindings]);
@@ -138,7 +165,22 @@ export function Layout({
           >
             {sampleLoading ? "Loading sample…" : "Load sample"}
           </button>
-          {liveAvailable && (
+          {publishedAvailable && !backendAvailable && (
+            <button
+              type="button"
+              className="button button-primary"
+              onClick={onPublished}
+              disabled={publishedLoading}
+              title={
+                publishedStamp
+                  ? `Published snapshot · ${publishedStamp}`
+                  : "Scheduled public intel snapshot"
+              }
+            >
+              {publishedLoading ? "Loading feeds…" : "Published feeds"}
+            </button>
+          )}
+          {backendAvailable && (
             <>
               <button
                 type="button"
@@ -229,7 +271,9 @@ export function Layout({
                 message={liveError}
                 onRetry={() => {
                   onClearError?.();
-                  onRun(false);
+                  if (backendAvailable) onRun(false);
+                  else if (publishedAvailable) onPublished();
+                  else onSample();
                 }}
                 onFixture={() => {
                   onClearError?.();
@@ -245,30 +289,48 @@ export function Layout({
                   walk the fixture.
                 </p>
                 <div className="callout-actions">
-                  <button
-                    type="button"
-                    className="button button-primary"
-                    onClick={() => onRun(true)}
-                  >
-                    Retry live
-                  </button>
+                  {backendAvailable ? (
+                    <button
+                      type="button"
+                      className="button button-primary"
+                      onClick={() => onRun(true)}
+                    >
+                      Retry live
+                    </button>
+                  ) : publishedAvailable ? (
+                    <button
+                      type="button"
+                      className="button button-primary"
+                      onClick={onPublished}
+                    >
+                      Reload published feeds
+                    </button>
+                  ) : null}
                   <button type="button" className="button" onClick={onSample}>
                     Open curated fixture
                   </button>
                 </div>
               </div>
             )}
-            {!result && !liveRunning && !sampleLoading && !liveError && (
+            {!result && !liveRunning && !sampleLoading && !publishedLoading && !liveError && (
               <div className="empty-state callout">
                 Nothing loaded yet.
                 <div className="callout-actions">
-                  {liveAvailable ? (
+                  {backendAvailable ? (
                     <button
                       type="button"
                       className="button button-primary"
                       onClick={() => onRun(false)}
                     >
                       Start live
+                    </button>
+                  ) : publishedAvailable ? (
+                    <button
+                      type="button"
+                      className="button button-primary"
+                      onClick={onPublished}
+                    >
+                      Open published feeds
                     </button>
                   ) : (
                     <button type="button" className="button button-primary" onClick={onStartIntake}>
@@ -315,7 +377,7 @@ export function Layout({
             <ActionLanesFlow
               findings={scopedFindings}
               selected={selectedResolved}
-              settling={sampleLoading || liveRunning}
+              settling={sampleLoading || publishedLoading || liveRunning}
               laneFilter={laneFilter}
               onLaneFilter={setLaneFilter}
               onSelect={openFinding}
@@ -336,7 +398,7 @@ export function Layout({
 
       <footer className="site-footer">
         <span>
-          No keys · live when available · route in-browser · fixture for offline demos · not a
+          No keys · published feeds on Pages · local live when API is up · route in-browser · not a
           scanner
         </span>
         <a href="https://jtflack-grc.github.io/portfolio/" target="_blank" rel="noreferrer">
