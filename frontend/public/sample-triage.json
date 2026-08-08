@@ -1,0 +1,750 @@
+{
+  "job_id": "sample-fixture",
+  "generated_at": "2026-08-07T18:00:00+00:00",
+  "mode": "sample",
+  "sources": [
+    "Sample fixture (public CVEs only \u2014 no API keys)",
+    "CISA KEV (where applicable)",
+    "Illustrative EPSS values for demo ranking",
+    "IBM Security Bulletin URLs from public pages",
+    "PTF ids copied from published IBM remediation tables \u2014 still confirm on Fix Central for your release"
+  ],
+  "metrics": {
+    "total": 8,
+    "urgent": 2,
+    "watch": 4,
+    "low": 2,
+    "kev_hits": 1,
+    "psirt_confirmed": 6,
+    "high_epss": 2,
+    "owasp_mapped": 4,
+    "by_platform": {
+      "ibm_i": 4,
+      "aix": 1,
+      "linux_on_power": 2,
+      "zos": 1
+    },
+    "lever_net_contribution": {
+      "cisa_kev": 100,
+      "epss_hot": 40,
+      "ibm_psirt": 72,
+      "cvss_high": 88
+    }
+  },
+  "findings": [
+    {
+      "cve_id": "CVE-2021-44228",
+      "title": "Log4Shell \u2014 remote code execution in Apache Log4j",
+      "description": "Critical RCE in Log4j. On Power / IBM i this is usually supply-chain / middleware (WAS, vendor apps), not the OS itself \u2014 TPRM and inventory matter.",
+      "published": "2021-12-10T00:00:00.000",
+      "last_modified": "2024-01-15T00:00:00.000",
+      "cvss_score": 10.0,
+      "cvss_severity": "CRITICAL",
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H",
+      "cwes": [
+        "CWE-502",
+        "CWE-400"
+      ],
+      "platforms": [
+        {
+          "platform": "ibm_i",
+          "match_strength": "keyword",
+          "products": [
+            "IBM i"
+          ]
+        },
+        {
+          "platform": "linux_on_power",
+          "match_strength": "keyword",
+          "products": [
+            "Linux on Power"
+          ]
+        }
+      ],
+      "on_kev": true,
+      "kev_ransomware": true,
+      "kev_date_added": "2021-12-10",
+      "epss": 0.97,
+      "epss_percentile": 0.99,
+      "ibm_bulletin_url": "https://www.ibm.com/support/pages/search?q=CVE-2021-44228",
+      "ibm_bulletin_title": "IBM product advisories for Log4j",
+      "ibm_bulletin_status": "confirmed",
+      "owasp_top10": [
+        "A06:2021-Vulnerable and Outdated Components"
+      ],
+      "nvd_url": "https://www.cve.org/CVERecord?id=CVE-2021-44228",
+      "score": 168,
+      "bucket": "urgent",
+      "levers": [
+        {
+          "id": "cisa_kev",
+          "source": "CISA KEV",
+          "direction": "up",
+          "weight": 100,
+          "reason": "Known exploited \u2014 BOD-class urgency"
+        },
+        {
+          "id": "kev_ransomware",
+          "source": "CISA KEV",
+          "direction": "up",
+          "weight": 25,
+          "reason": "Known ransomware campaign use"
+        },
+        {
+          "id": "epss_hot",
+          "source": "FIRST EPSS",
+          "direction": "up",
+          "weight": 40,
+          "reason": "Extremely high exploit probability"
+        }
+      ],
+      "resolution_steps": [
+        {
+          "title": "IBM Security Bulletin (source of truth)",
+          "detail": "Map which IBM middleware / products on your LPARs still ship vulnerable Log4j; apply vendor packages.",
+          "kind": "bulletin",
+          "url": "https://www.ibm.com/support/pages/search?q=CVE-2021-44228"
+        },
+        {
+          "title": "Fix Central",
+          "detail": "Pull product-specific fixes \u2014 rarely a single IBM i PTF.",
+          "kind": "fixcentral",
+          "url": "https://www.ibm.com/support/fixcentral"
+        }
+      ],
+      "interim_mitigations": [
+        {
+          "title": "CISA required action",
+          "detail": "Apply updates or mitigate per CISA guidance; inventory JVMs and vendor apps on Power.",
+          "kind": "kev"
+        }
+      ],
+      "risk_surface": "supply_chain",
+      "action_lane": "apply"
+    },
+    {
+      "cve_id": "CVE-2024-25050",
+      "title": "IBM i local privilege escalation via unqualified library call",
+      "description": "IBM i networking and compiler infrastructure could allow a local user to gain elevated privileges due to an unqualified library call (CWE-class authority flaw). Published IBM Security Bulletin lists release-specific PTFs.",
+      "published": "2024-04-27T00:00:00.000",
+      "last_modified": "2024-04-27T00:00:00.000",
+      "cvss_score": 8.4,
+      "cvss_severity": "HIGH",
+      "cvss_vector": "CVSS:3.0/AV:L/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+      "cwes": [
+        "CWE-427",
+        "CWE-269"
+      ],
+      "platforms": [
+        {
+          "platform": "ibm_i",
+          "match_strength": "cpe",
+          "products": [
+            "IBM i"
+          ]
+        }
+      ],
+      "on_kev": false,
+      "kev_ransomware": false,
+      "epss": 0.06,
+      "epss_percentile": 0.82,
+      "ibm_bulletin_url": "https://www.ibm.com/support/pages/node/7149672",
+      "ibm_bulletin_title": "IBM Security Bulletin \u2014 CVE-2024-25050",
+      "ibm_bulletin_status": "confirmed",
+      "owasp_top10": [
+        "A01:2021-Broken Access Control"
+      ],
+      "nvd_url": "https://www.cve.org/CVERecord?id=CVE-2024-25050",
+      "score": 74,
+      "bucket": "urgent",
+      "levers": [
+        {
+          "id": "cvss_high",
+          "source": "NVD CVSS",
+          "direction": "up",
+          "weight": 22,
+          "reason": "High CVSS privilege-escalation class"
+        },
+        {
+          "id": "ibm_psirt",
+          "source": "IBM PSIRT",
+          "direction": "up",
+          "weight": 18,
+          "reason": "Published IBM Security Bulletin with remediation table"
+        },
+        {
+          "id": "cpe_match",
+          "source": "NVD CPE",
+          "direction": "up",
+          "weight": 10,
+          "reason": "Strong IBM i platform match"
+        },
+        {
+          "id": "local_av_temper",
+          "source": "CVSS vector",
+          "direction": "down",
+          "weight": -10,
+          "reason": "Local attack vector \u2014 still urgent for elevated shops"
+        }
+      ],
+      "resolution_steps": [
+        {
+          "title": "IBM Security Bulletin (source of truth)",
+          "detail": "Apply PTFs listed for 5770-SS1 *BASE and Option 12 for your release (7.2\u20137.5).",
+          "kind": "bulletin",
+          "url": "https://www.ibm.com/support/pages/node/7149672"
+        },
+        {
+          "title": "Confirm PTF on Fix Central",
+          "detail": "Use the bulletin\u2019s remediation table for your release \u2014 do not guess PTF ids from memory.",
+          "kind": "fixcentral",
+          "url": "https://www.ibm.com/support/fixcentral"
+        },
+        {
+          "title": "Verify on IBM i (systems check)",
+          "detail": "After apply: DSPPTF / GO PTF and match the bulletin\u2019s affected product table.",
+          "kind": "verify"
+        }
+      ],
+      "interim_mitigations": [
+        {
+          "title": "Constrain privileged profiles",
+          "detail": "Review *ALLOBJ / *SECADM holders and QAUDJRN for unusual elevation until the PTF is applied.",
+          "kind": "interim"
+        },
+        {
+          "title": "Local access hygiene",
+          "detail": "Limit interactive / command-line access for untrusted profiles \u2014 Attack Vector is Local.",
+          "kind": "interim"
+        }
+      ],
+      "risk_surface": "platform",
+      "action_lane": "apply"
+    },
+    {
+      "cve_id": "CVE-2024-31879",
+      "title": "IBM i Management Central \u2014 deserialization DoS on network ports",
+      "description": "IBM i Management Central deserialization of untrusted data can deny network ports. Public bulletin lists release PTFs (e.g. SJ00619 on 7.4).",
+      "published": "2024-05-18T00:00:00.000",
+      "last_modified": "2024-05-18T00:00:00.000",
+      "cvss_score": 7.5,
+      "cvss_severity": "HIGH",
+      "cvss_vector": "CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+      "cwes": [
+        "CWE-502"
+      ],
+      "platforms": [
+        {
+          "platform": "ibm_i",
+          "match_strength": "cpe",
+          "products": [
+            "IBM i"
+          ]
+        }
+      ],
+      "on_kev": false,
+      "kev_ransomware": false,
+      "epss": 0.09,
+      "epss_percentile": 0.86,
+      "ibm_bulletin_url": "https://www.ibm.com/support/pages/node/7154380",
+      "ibm_bulletin_title": "IBM Security Bulletin \u2014 CVE-2024-31879",
+      "ibm_bulletin_status": "confirmed",
+      "owasp_top10": [
+        "A08:2021-Software and Data Integrity Failures"
+      ],
+      "nvd_url": "https://www.cve.org/CVERecord?id=CVE-2024-31879",
+      "score": 68,
+      "bucket": "watch",
+      "levers": [
+        {
+          "id": "cvss_high",
+          "source": "NVD CVSS",
+          "direction": "up",
+          "weight": 22,
+          "reason": "High CVSS with network vector"
+        },
+        {
+          "id": "network_av",
+          "source": "CVSS vector",
+          "direction": "up",
+          "weight": 12,
+          "reason": "Attack Vector is Network"
+        },
+        {
+          "id": "ibm_psirt",
+          "source": "IBM PSIRT",
+          "direction": "up",
+          "weight": 18,
+          "reason": "Published bulletin with PTF download links"
+        }
+      ],
+      "resolution_steps": [
+        {
+          "title": "IBM Security Bulletin (source of truth)",
+          "detail": "5770-SS1 Option 3 PTFs \u2014 example 7.4 token SJ00619 (confirm for your release).",
+          "kind": "bulletin",
+          "url": "https://www.ibm.com/support/pages/node/7154380"
+        },
+        {
+          "title": "PTF SJ00619",
+          "detail": "Published for IBM i 7.4 in the May 2024 bulletin table. Confirm your release row before apply.",
+          "kind": "ptf",
+          "url": "https://www.ibm.com/mysupport/s/fix-information?legacy=SJ00619"
+        },
+        {
+          "title": "Fix Central",
+          "detail": "Order the PTF for your release from the bulletin table.",
+          "kind": "fixcentral",
+          "url": "https://www.ibm.com/support/fixcentral"
+        }
+      ],
+      "interim_mitigations": [
+        {
+          "title": "Network path control",
+          "detail": "Constrain Management Central / related listeners until the PTF is applied.",
+          "kind": "interim"
+        }
+      ],
+      "risk_surface": "platform",
+      "action_lane": "apply"
+    },
+    {
+      "cve_id": "CVE-2024-31890",
+      "title": "IBM i TCP/IP Connectivity Utilities \u2014 local privilege escalation",
+      "description": "Local privilege escalation in IBM TCP/IP Connectivity Utilities for i. Bulletin lists 5770-TC1 PTFs (e.g. SJ00681 on 7.5).",
+      "published": "2024-06-20T00:00:00.000",
+      "last_modified": "2024-06-20T00:00:00.000",
+      "cvss_score": 7.8,
+      "cvss_severity": "HIGH",
+      "cvss_vector": "CVSS:3.0/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H",
+      "cwes": [
+        "CWE-269"
+      ],
+      "platforms": [
+        {
+          "platform": "ibm_i",
+          "match_strength": "cpe",
+          "products": [
+            "IBM i"
+          ]
+        }
+      ],
+      "on_kev": false,
+      "kev_ransomware": false,
+      "epss": 0.04,
+      "epss_percentile": 0.75,
+      "ibm_bulletin_url": "https://www.ibm.com/support/pages/node/7158240",
+      "ibm_bulletin_title": "IBM Security Bulletin \u2014 CVE-2024-31890",
+      "ibm_bulletin_status": "confirmed",
+      "owasp_top10": [
+        "A01:2021-Broken Access Control"
+      ],
+      "nvd_url": "https://www.cve.org/CVERecord?id=CVE-2024-31890",
+      "score": 62,
+      "bucket": "watch",
+      "levers": [
+        {
+          "id": "cvss_high",
+          "source": "NVD CVSS",
+          "direction": "up",
+          "weight": 22,
+          "reason": "High CVSS privilege escalation"
+        },
+        {
+          "id": "ibm_psirt",
+          "source": "IBM PSIRT",
+          "direction": "up",
+          "weight": 18,
+          "reason": "Published bulletin with TC1 PTF links"
+        },
+        {
+          "id": "local_av_temper",
+          "source": "CVSS vector",
+          "direction": "down",
+          "weight": -10,
+          "reason": "Local vector \u2014 elevated shops should still prioritize"
+        }
+      ],
+      "resolution_steps": [
+        {
+          "title": "IBM Security Bulletin (source of truth)",
+          "detail": "Apply 5770-TC1 PTFs for your release (7.3\u20137.5).",
+          "kind": "bulletin",
+          "url": "https://www.ibm.com/support/pages/node/7158240"
+        },
+        {
+          "title": "PTF SJ00681",
+          "detail": "Published for IBM i 7.5 in the June 2024 bulletin. Confirm your release row.",
+          "kind": "ptf",
+          "url": "https://www.ibm.com/mysupport/s/fix-information?legacy=SJ00681"
+        },
+        {
+          "title": "Verify on IBM i (systems check)",
+          "detail": "DSPPTF after apply; retain change evidence.",
+          "kind": "verify"
+        }
+      ],
+      "interim_mitigations": [
+        {
+          "title": "Constrain privileged profiles",
+          "detail": "Limit command-line access for untrusted profiles until patched.",
+          "kind": "interim"
+        }
+      ],
+      "risk_surface": "platform",
+      "action_lane": "apply"
+    },
+    {
+      "cve_id": "CVE-2023-48795",
+      "title": "Terrapin \u2014 SSH protocol prefix truncation",
+      "description": "SSH transport integrity weakness during extension negotiation. Relevant where OpenSSH is exposed on IBM i, AIX, or Linux on Power management paths.",
+      "published": "2023-12-18T00:00:00.000",
+      "last_modified": "2024-11-01T00:00:00.000",
+      "cvss_score": 5.9,
+      "cvss_severity": "MEDIUM",
+      "cvss_vector": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:H/A:N",
+      "cwes": [
+        "CWE-354"
+      ],
+      "platforms": [
+        {
+          "platform": "ibm_i",
+          "match_strength": "keyword",
+          "products": [
+            "IBM i"
+          ]
+        },
+        {
+          "platform": "aix",
+          "match_strength": "keyword",
+          "products": [
+            "AIX"
+          ]
+        },
+        {
+          "platform": "linux_on_power",
+          "match_strength": "keyword",
+          "products": [
+            "Linux on Power"
+          ]
+        }
+      ],
+      "on_kev": false,
+      "kev_ransomware": false,
+      "epss": 0.42,
+      "epss_percentile": 0.97,
+      "ibm_bulletin_url": "https://www.ibm.com/support/pages/search?q=CVE-2023-48795",
+      "ibm_bulletin_title": "IBM Support search \u2014 Terrapin / OpenSSH",
+      "ibm_bulletin_status": "confirmed",
+      "owasp_top10": [
+        "A02:2021-Cryptographic Failures"
+      ],
+      "nvd_url": "https://www.cve.org/CVERecord?id=CVE-2023-48795",
+      "score": 58,
+      "bucket": "watch",
+      "levers": [
+        {
+          "id": "epss_hot",
+          "source": "FIRST EPSS",
+          "direction": "up",
+          "weight": 40,
+          "reason": "Elevated exploit probability relative to CVSS"
+        },
+        {
+          "id": "network_av",
+          "source": "CVSS vector",
+          "direction": "up",
+          "weight": 12,
+          "reason": "Network attack vector"
+        }
+      ],
+      "resolution_steps": [
+        {
+          "title": "Search IBM Support for this CVE",
+          "detail": "Confirm OpenSSH / SSH bulletin scope for your release before change.",
+          "kind": "search",
+          "url": "https://www.ibm.com/support/pages/search?q=CVE-2023-48795"
+        },
+        {
+          "title": "Fix Central",
+          "detail": "Locate OpenSSH-related PTFs or filesets for your platform.",
+          "kind": "fixcentral",
+          "url": "https://www.ibm.com/support/fixcentral"
+        }
+      ],
+      "interim_mitigations": [
+        {
+          "title": "Network path control",
+          "detail": "Constrain SSH to management networks and jump hosts until patched.",
+          "kind": "interim"
+        }
+      ],
+      "risk_surface": "supply_chain",
+      "action_lane": "contain"
+    },
+    {
+      "cve_id": "CVE-2023-28531",
+      "title": "OpenSSH / ssh-agent related class \u2014 AIX contain-first fixture",
+      "description": "High CVSS OpenSSH-class finding used to demonstrate EPSS tempering and Contain dock when no package is extracted yet. Confirm live AIX advisories before change.",
+      "published": "2023-03-17T00:00:00.000",
+      "last_modified": "2024-02-01T00:00:00.000",
+      "cvss_score": 9.8,
+      "cvss_severity": "CRITICAL",
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+      "cwes": [
+        "CWE-787"
+      ],
+      "platforms": [
+        {
+          "platform": "aix",
+          "match_strength": "cpe",
+          "products": [
+            "AIX"
+          ]
+        }
+      ],
+      "on_kev": false,
+      "kev_ransomware": false,
+      "epss": 0.002,
+      "epss_percentile": 0.45,
+      "ibm_bulletin_url": "https://www.ibm.com/support/pages/search?q=CVE-2023-28531",
+      "ibm_bulletin_title": null,
+      "ibm_bulletin_status": "unconfirmed",
+      "owasp_top10": [],
+      "nvd_url": "https://www.cve.org/CVERecord?id=CVE-2023-28531",
+      "score": 48,
+      "bucket": "watch",
+      "levers": [
+        {
+          "id": "cvss_critical",
+          "source": "NVD CVSS",
+          "direction": "up",
+          "weight": 35,
+          "reason": "Critical CVSS"
+        },
+        {
+          "id": "epss_vs_cvss_temper",
+          "source": "FIRST EPSS",
+          "direction": "down",
+          "weight": -22,
+          "reason": "Critical on paper, cold EPSS \u2014 temper without KEV"
+        }
+      ],
+      "resolution_steps": [
+        {
+          "title": "No PTF/APAR extracted yet",
+          "detail": "Search Fix Central; keep interim controls until a bulletin package is confirmed.",
+          "kind": "unknown"
+        },
+        {
+          "title": "Search IBM Support for this CVE",
+          "detail": "Confirm advisory and fileset levels for your AIX TL/SP.",
+          "kind": "search",
+          "url": "https://www.ibm.com/support/pages/search?q=CVE-2023-28531"
+        }
+      ],
+      "interim_mitigations": [
+        {
+          "title": "Reduce remote service exposure",
+          "detail": "Limit sshd listeners and management networks until the fix package is staged.",
+          "kind": "interim"
+        }
+      ],
+      "risk_surface": "mixed",
+      "action_lane": "contain"
+    },
+    {
+      "cve_id": "CVE-2022-36763",
+      "title": "EDK II / firmware-class issue on Power systems",
+      "description": "Firmware-layer finding illustrating Linux on Power / system firmware surface. Often a staged firmware change rather than an OS PTF rush.",
+      "published": "2024-01-09T00:00:00.000",
+      "last_modified": "2024-05-01T00:00:00.000",
+      "cvss_score": 7.8,
+      "cvss_severity": "HIGH",
+      "cvss_vector": "CVSS:3.1/AV:L/AC:L/PR:H/UI:N/S:C/C:H/I:H/A:H",
+      "cwes": [
+        "CWE-787"
+      ],
+      "platforms": [
+        {
+          "platform": "linux_on_power",
+          "match_strength": "cpe",
+          "products": [
+            "Linux on Power"
+          ]
+        }
+      ],
+      "on_kev": false,
+      "kev_ransomware": false,
+      "epss": 0.0008,
+      "epss_percentile": 0.2,
+      "ibm_bulletin_url": "https://www.ibm.com/support/pages/search?q=CVE-2022-36763",
+      "ibm_bulletin_title": "IBM firmware / Power advisory search",
+      "ibm_bulletin_status": "confirmed",
+      "owasp_top10": [],
+      "nvd_url": "https://www.cve.org/CVERecord?id=CVE-2022-36763",
+      "score": 44,
+      "bucket": "watch",
+      "levers": [
+        {
+          "id": "cvss_high",
+          "source": "NVD CVSS",
+          "direction": "up",
+          "weight": 22,
+          "reason": "High CVSS"
+        },
+        {
+          "id": "local_av_temper",
+          "source": "CVSS vector",
+          "direction": "down",
+          "weight": -10,
+          "reason": "Local / privileged firmware path"
+        }
+      ],
+      "resolution_steps": [
+        {
+          "title": "IBM Security Bulletin (source of truth)",
+          "detail": "Confirm Power system firmware levels and HMC guidance before update windows.",
+          "kind": "bulletin",
+          "url": "https://www.ibm.com/support/pages/search?q=CVE-2022-36763"
+        },
+        {
+          "title": "Fix Central",
+          "detail": "Firmware packages are staged carefully \u2014 platform change, not routine OS PTF.",
+          "kind": "fixcentral",
+          "url": "https://www.ibm.com/support/fixcentral"
+        }
+      ],
+      "interim_mitigations": [
+        {
+          "title": "Local access hygiene",
+          "detail": "Prioritize console and privileged-user controls.",
+          "kind": "interim"
+        }
+      ],
+      "risk_surface": "platform",
+      "action_lane": "apply"
+    },
+    {
+      "cve_id": "CVE-2019-1010022",
+      "title": "Ancient glibc-class finding with cold exploitation signal",
+      "description": "Museum-shelf CVE kept to show tempering: theoretical interest historically, cold EPSS, no KEV \u2014 Monitor dock, not panic.",
+      "published": "2019-07-15T00:00:00.000",
+      "last_modified": "2020-01-01T00:00:00.000",
+      "cvss_score": 7.5,
+      "cvss_severity": "HIGH",
+      "cvss_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
+      "cwes": [
+        "CWE-200"
+      ],
+      "platforms": [
+        {
+          "platform": "linux_on_power",
+          "match_strength": "keyword",
+          "products": [
+            "Linux on Power"
+          ]
+        },
+        {
+          "platform": "zos",
+          "match_strength": "keyword",
+          "products": [
+            "z/OS"
+          ]
+        }
+      ],
+      "on_kev": false,
+      "kev_ransomware": false,
+      "epss": 0.0004,
+      "epss_percentile": 0.1,
+      "ibm_bulletin_url": "https://www.ibm.com/support/pages/search?q=CVE-2019-1010022",
+      "ibm_bulletin_title": null,
+      "ibm_bulletin_status": "unconfirmed",
+      "owasp_top10": [],
+      "nvd_url": "https://www.cve.org/CVERecord?id=CVE-2019-1010022",
+      "score": 18,
+      "bucket": "low",
+      "levers": [
+        {
+          "id": "age_temper",
+          "source": "Freshness",
+          "direction": "down",
+          "weight": -20,
+          "reason": "Ancient without KEV \u2014 tempered"
+        },
+        {
+          "id": "epss_vs_cvss_temper",
+          "source": "FIRST EPSS",
+          "direction": "down",
+          "weight": -22,
+          "reason": "High CVSS with cold EPSS"
+        }
+      ],
+      "resolution_steps": [
+        {
+          "title": "No PTF/APAR extracted yet",
+          "detail": "Low priority in this fixture \u2014 confirm component currency only if inventory still shows it.",
+          "kind": "unknown"
+        },
+        {
+          "title": "Search IBM Support for this CVE",
+          "detail": "Only if inventory proves the component is still present.",
+          "kind": "search",
+          "url": "https://www.ibm.com/support/pages/search?q=CVE-2019-1010022"
+        }
+      ],
+      "interim_mitigations": [
+        {
+          "title": "Vendor package channel",
+          "detail": "Prefer distro packages for ppc64le rather than ad-hoc rebuilds.",
+          "kind": "interim"
+        }
+      ],
+      "risk_surface": "supply_chain",
+      "action_lane": "monitor"
+    }
+  ],
+  "feed_health": [
+    {
+      "id": "fixture",
+      "label": "Sample fixture",
+      "status": "ok",
+      "detail": "curated public CVEs"
+    },
+    {
+      "id": "kev",
+      "label": "CISA KEV patterns",
+      "status": "ok",
+      "detail": "illustrative where applicable"
+    },
+    {
+      "id": "nvd",
+      "label": "NVD-style fields",
+      "status": "ok",
+      "detail": "public CVE records"
+    },
+    {
+      "id": "epss",
+      "label": "FIRST EPSS",
+      "status": "ok",
+      "detail": "illustrative scores for ranking"
+    },
+    {
+      "id": "ibm",
+      "label": "IBM bulletins",
+      "status": "ok",
+      "detail": "public bulletin URLs + published PTF refs"
+    },
+    {
+      "id": "guidance",
+      "label": "Resolve / Interim",
+      "status": "ok",
+      "detail": "built"
+    }
+  ],
+  "notes": [
+    "Sample mode: no API keys, no uploads, works as a static web page.",
+    "Flagship walkthrough: CVE-2024-25050 (IBM i privilege escalation -> Apply dock)."
+  ],
+  "flagship_cve": "CVE-2024-25050"
+}
