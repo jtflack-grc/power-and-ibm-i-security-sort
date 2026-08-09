@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ActionLane } from "./ActionLanesFlow";
-import type { Bucket, Finding } from "../types";
+import type { Bucket, Bulletin, Finding } from "../types";
 import { PLATFORM_LABELS } from "../types";
 import { hasIndividualPtfEvidence } from "../ptfEvidence";
 
 interface Props {
   findings: Finding[];
+  bulletins?: Bulletin[];
   selectedId: string | null;
   onSelect: (f: Finding) => void;
   laneFilter: ActionLane | "all";
@@ -18,6 +19,7 @@ const LANES: Array<ActionLane | "all"> = ["all", "apply", "contain", "monitor"];
 const FOCUS_LIMIT = 40;
 /** Match backend RankerConfig.ancient_days (~7y). */
 const MUSEUM_AGE_DAYS = 2555;
+const SEEN_BULLETINS_KEY = "ibmi-curator-seen-bulletins-v1";
 
 function shortDate(value?: string | null): string | null {
   if (!value) return null;
@@ -44,6 +46,7 @@ function hasPtfEvidence(f: Finding): boolean {
 
 export function FindingsPanel({
   findings,
+  bulletins = [],
   selectedId,
   onSelect,
   laneFilter,
@@ -54,6 +57,12 @@ export function FindingsPanel({
   const [includeOlder, setIncludeOlder] = useState(false);
   const [showAll, setShowAll] = useState(false);
   const [ptfOnly, setPtfOnly] = useState(false);
+  const [releaseFilter, setReleaseFilter] = useState("all");
+  const [remedyFilter, setRemedyFilter] = useState("all");
+  const [recentOnly, setRecentOnly] = useState(false);
+  const [newOnly, setNewOnly] = useState(false);
+  const [newBulletinIds, setNewBulletinIds] = useState<Set<string>>(new Set());
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const listRef = useRef<HTMLDivElement>(null);
   const skipAutoScroll = useRef(true);
 
@@ -107,6 +116,64 @@ export function FindingsPanel({
     return head;
   }, [filtered, showAll, selectedId]);
 
+  const bulletinIndex = useMemo(
+    () => new Map(bulletins.map((bulletin) => [bulletin.bulletin_id, bulletin])),
+    [bulletins]
+  );
+  useEffect(() => {
+    if (!bulletins.length) return;
+    const current = bulletins.map((bulletin) => bulletin.bulletin_id);
+    try {
+      const previous = JSON.parse(localStorage.getItem(SEEN_BULLETINS_KEY) || "[]") as string[];
+      setNewBulletinIds(new Set(previous.length ? current.filter((id) => !previous.includes(id)) : []));
+      localStorage.setItem(SEEN_BULLETINS_KEY, JSON.stringify(current));
+    } catch {
+      setNewBulletinIds(new Set());
+    }
+  }, [bulletins]);
+  const releaseOptions = useMemo(
+    () => [...new Set(bulletins.flatMap((bulletin) => bulletin.applicability.map((row) => row.release).filter(Boolean) as string[]))].sort(),
+    [bulletins]
+  );
+  const visibleGroups = useMemo(() => {
+    const groups = new Map<string, { id: string; title: string; published?: string | null; findings: Finding[] }>();
+    for (const finding of visible) {
+      const id = finding.bulletin_id || finding.ibm_bulletin_url || `cve-${finding.cve_id}`;
+      const bulletin = bulletinIndex.get(id);
+      const group = groups.get(id);
+      if (group) group.findings.push(finding);
+      else groups.set(id, {
+        id,
+        title: bulletin?.title || finding.ibm_bulletin_title || finding.title,
+        published: bulletin?.published || finding.published,
+        findings: [finding],
+      });
+    }
+    return [...groups.values()].filter((group) => {
+      const bulletin = bulletinIndex.get(group.id);
+      if (newOnly && !newBulletinIds.has(group.id)) return false;
+      if (recentOnly) {
+        const stamp = new Date(group.published || "").getTime();
+        if (Number.isNaN(stamp) || Date.now() - stamp > 30 * 86_400_000) return false;
+      }
+      if (releaseFilter !== "all" && !bulletin?.applicability.some((row) => row.release === releaseFilter)) return false;
+      if (remedyFilter === "all") return true;
+      const steps = group.findings.flatMap((finding) => finding.resolution_steps ?? []);
+      if (remedyFilter === "ptf") return steps.some((step) => step.kind === "ptf");
+      if (remedyFilter === "group") return steps.some((step) => step.kind === "ptf_group");
+      if (remedyFilter === "apar") return steps.some((step) => step.kind === "apar");
+      return !steps.some((step) => ["ptf", "ptf_group", "apar"].includes(String(step.kind)));
+    });
+  }, [visible, bulletinIndex, releaseFilter, remedyFilter, newOnly, newBulletinIds, recentOnly]);
+  const visibleGroupFindings = useMemo(() => visibleGroups.flatMap((group) => group.findings), [visibleGroups]);
+
+  useEffect(() => {
+    if (!selectedId) return;
+    const group = visibleGroups.find((item) => item.findings.some((finding) => finding.cve_id === selectedId));
+    if (!group) return;
+    setExpanded((current) => current.has(group.id) ? current : new Set([...current, group.id]));
+  }, [selectedId, visibleGroups]);
+
   // New result or filter change: stay at the top of the findings panel.
   useEffect(() => {
     skipAutoScroll.current = true;
@@ -144,18 +211,18 @@ export function FindingsPanel({
       ref={listRef}
       tabIndex={0}
       onKeyDown={(e) => {
-        if (!visible.length) return;
-        const idx = visible.findIndex((f) => f.cve_id === selectedId);
+        if (!visibleGroupFindings.length) return;
+        const idx = visibleGroupFindings.findIndex((f) => f.cve_id === selectedId);
         if (e.key === "ArrowDown") {
           e.preventDefault();
-          const next = visible[Math.min(visible.length - 1, Math.max(0, idx) + 1)];
+          const next = visibleGroupFindings[Math.min(visibleGroupFindings.length - 1, Math.max(0, idx) + 1)];
           if (next) onSelect(next);
         } else if (e.key === "ArrowUp") {
           e.preventDefault();
-          const prev = visible[Math.max(0, (idx < 0 ? 0 : idx) - 1)];
+          const prev = visibleGroupFindings[Math.max(0, (idx < 0 ? 0 : idx) - 1)];
           if (prev) onSelect(prev);
         } else if (e.key === "Enter" && selectedId) {
-          const cur = visible.find((f) => f.cve_id === selectedId);
+          const cur = visibleGroupFindings.find((f) => f.cve_id === selectedId);
           if (cur) onSelect(cur);
         }
       }}
@@ -197,6 +264,19 @@ export function FindingsPanel({
         ))}
       </div>
       <div className="findings-focus-bar">
+        <button type="button" className={`chip ${recentOnly ? "active" : ""}`} onClick={() => setRecentOnly((value) => !value)}>Recently published · 30d</button>
+        {newBulletinIds.size > 0 && <button type="button" className={`chip ${newOnly ? "active" : ""}`} onClick={() => setNewOnly((value) => !value)}>New since last visit ({newBulletinIds.size})</button>}
+        <label className="queue-select">Release
+          <select value={releaseFilter} onChange={(event) => setReleaseFilter(event.target.value)}>
+            <option value="all">All</option>
+            {releaseOptions.map((value) => <option key={value} value={value}>{value}</option>)}
+          </select>
+        </label>
+        <label className="queue-select">Remedy
+          <select value={remedyFilter} onChange={(event) => setRemedyFilter(event.target.value)}>
+            <option value="all">All</option><option value="ptf">Individual PTF</option><option value="group">Group PTF</option><option value="apar">APAR</option><option value="unresolved">Unresolved</option>
+          </select>
+        </label>
         <button
           type="button"
           className={`chip ${includeOlder ? "active" : ""}`}
@@ -216,54 +296,35 @@ export function FindingsPanel({
         )}
       </div>
       <div className="filter-count">
-        Showing {visible.length} of {findings.length}
+        Showing {visibleGroups.length} bulletins · {visibleGroupFindings.length} of {findings.length} CVEs
         {!showAll && filtered.length > FOCUS_LIMIT ? ` · focus ${FOCUS_LIMIT}` : ""}
         {olderHidden > 0 ? ` · ${olderHidden} older hidden` : ""}
         {" · ↑↓ to move"}
       </div>
-      {visible.map((f) => {
-        const selected = selectedId === f.cve_id;
-        const supply = f.risk_surface && f.risk_surface !== "platform";
-        const published = shortDate(f.published);
+      {visibleGroups.map((group) => {
+        const isExpanded = expanded.has(group.id);
+        const lead = group.findings.reduce((best, finding) => finding.score > best.score ? finding : best, group.findings[0]);
+        const published = shortDate(group.published);
         return (
-          <button
-            key={f.cve_id}
-            type="button"
-            data-cve={f.cve_id}
-            className={`finding-row ${selected ? "selected" : ""}`}
-            onClick={() => onSelect(f)}
-          >
-            <div className="finding-top">
-              <span className="cve-id">{f.cve_id}</span>
-              <span className="score-pill">{f.score.toFixed(0)}</span>
-            </div>
-            <div className="finding-title">{f.title}</div>
-            <div className="finding-meta">
-              {published && <span>{published}</span>}
-              {f.cvss_score != null && <span>CVSS {f.cvss_score}</span>}
-              {f.epss != null && <span>EPSS {(f.epss * 100).toFixed(1)}%</span>}
-              {f.ibm_bulletin_status === "confirmed" && <span>PSIRT</span>}
-            </div>
-            <div className="badges">
-              <span className={`badge ${f.bucket}`}>{f.bucket}</span>
-              {f.action_lane && (
-                <span className={`badge badge-lane lane-${f.action_lane}`}>
-                  {f.action_lane}
-                </span>
-              )}
-              {supply && <span className="badge badge-supply">Supply chain</span>}
-              {f.on_kev && <span className="badge kev">KEV</span>}
-              {hasPtfEvidence(f) && <span className="badge badge-ptf">PTF</span>}
-              {pasteHitIds.includes(f.cve_id) && (
-                <span className="badge badge-paste">paste match</span>
-              )}
-              {f.platforms.slice(0, 2).map((p) => (
-                <span key={p.platform} className="badge badge-platform">
-                  {PLATFORM_LABELS[p.platform]}
-                </span>
-              ))}
-            </div>
-          </button>
+          <section key={group.id} className={`bulletin-group ${group.findings.some((finding) => finding.cve_id === selectedId) ? "selected" : ""}`}>
+            <button type="button" className="bulletin-row" aria-expanded={isExpanded} onClick={() => setExpanded((current) => {
+              const next = new Set(current);
+              if (next.has(group.id)) next.delete(group.id); else next.add(group.id);
+              return next;
+            })}>
+              <div className="finding-top"><span className="cve-id">{group.findings.length} CVE{group.findings.length === 1 ? "" : "s"}</span><span className="score-pill">{lead.score.toFixed(0)}</span></div>
+              <div className="finding-title">{group.title}</div>
+              <div className="finding-meta">{published && <span>{published}</span>}<span>PSIRT bulletin</span><span>{isExpanded ? "Collapse" : "Expand"}</span></div>
+              <div className="badges"><span className={`badge ${lead.bucket}`}>{lead.bucket}</span>{group.findings.some((finding) => finding.on_kev) && <span className="badge kev">KEV</span>}{group.findings.some(hasPtfEvidence) && <span className="badge badge-ptf">PTF</span>}</div>
+            </button>
+            {isExpanded && <div className="bulletin-cves">{group.findings.map((f) => {
+              const selected = selectedId === f.cve_id;
+              return <button key={f.cve_id} type="button" data-cve={f.cve_id} className={`finding-row finding-row-child ${selected ? "selected" : ""}`} onClick={() => onSelect(f)}>
+                <div className="finding-top"><span className="cve-id">{f.cve_id}</span><span className="score-pill">{f.score.toFixed(0)}</span></div>
+                <div className="finding-meta">{f.cvss_score != null && <span>CVSS {f.cvss_score}</span>}{f.epss != null && <span>EPSS {(f.epss * 100).toFixed(1)}%</span>}<span className={`badge ${f.bucket}`}>{f.bucket}</span>{f.action_lane && <span className={`badge badge-lane lane-${f.action_lane}`}>{f.action_lane}</span>}{hasPtfEvidence(f) && <span className="badge badge-ptf">PTF</span>}{pasteHitIds.includes(f.cve_id) && <span className="badge badge-paste">paste match</span>}{f.platforms.slice(0, 1).map((p) => <span key={p.platform} className="badge badge-platform">{PLATFORM_LABELS[p.platform]}</span>)}</div>
+              </button>;
+            })}</div>}
+          </section>
         );
       })}
       {filtered.length === 0 && (

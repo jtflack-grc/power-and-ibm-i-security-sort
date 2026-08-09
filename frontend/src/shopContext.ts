@@ -2,7 +2,7 @@
  * Shop context — optional, session-only, never uploaded.
  * Answers live in sessionStorage and only re-weight the local result.
  */
-import type { Finding, TriageMetrics, TriageResult } from "./types";
+import type { Bulletin, Finding, TriageMetrics, TriageResult } from "./types";
 
 export type Exposure = "internet" | "internal" | "restricted";
 export type Privilege = "elevated" | "standard";
@@ -289,7 +289,11 @@ export function applyShopContext(result: TriageResult, ctx: ShopContext): Triage
   };
 }
 
-export function changePacketMarkdown(f: Finding, ctx?: ShopContext | null): string {
+export function changePacketMarkdown(
+  f: Finding,
+  ctx?: ShopContext | null,
+  meta?: { bulletin?: Bulletin | null; generatedAt?: string | null }
+): string {
   const lines: string[] = [
     `# Change packet — ${f.cve_id}`,
     "",
@@ -313,6 +317,19 @@ export function changePacketMarkdown(f: Finding, ctx?: ShopContext | null): stri
     }`
   );
   if (f.on_kev) lines.push("- CISA KEV: yes");
+  if (meta?.generatedAt) lines.push(`- Curator snapshot: ${meta.generatedAt}`);
+  if (meta?.bulletin) {
+    lines.push("", "## IBM i applicability");
+    for (const row of meta.bulletin.applicability) {
+      lines.push(
+        `- ${row.product_name}${row.product_id ? ` (${row.product_id})` : ""} · ${row.release ?? "release unresolved"}`,
+        `  - Individual PTFs: ${row.individual_ptfs.join(", ") || "none source-associated"}`,
+        `  - Group PTFs: ${row.group_ptfs.join(", ") || "none source-associated"}`,
+        `  - APARs: ${row.apars.join(", ") || "none source-associated"}`,
+        `  - Extraction confidence: ${row.confidence}`
+      );
+    }
+  }
   lines.push("", "## Counter-levers");
   for (const l of f.levers ?? []) {
     lines.push(`- (${l.direction} ${l.weight}) **${l.source}** — ${l.reason}`);
@@ -325,6 +342,18 @@ export function changePacketMarkdown(f: Finding, ctx?: ShopContext | null): stri
   for (const s of f.interim_mitigations ?? []) {
     lines.push(`- **${s.title}:** ${s.detail}`);
   }
+  lines.push(
+    "",
+    "## Verification evidence checklist",
+    "- [ ] Confirm affected product and IBM i release against the IBM bulletin.",
+    "- [ ] Confirm the selected PTF/APAR or group level in Fix Central.",
+    "- [ ] Capture pre-change PTF status.",
+    "- [ ] Capture change record and application result.",
+    "- [ ] Capture post-change DSPPTF or WRKPTFGRP status.",
+    "- [ ] Record reviewer and closure decision.",
+    "",
+    "**Observed evidence:** none recorded by this static curator. The checklist describes expected evidence only."
+  );
   if (ctx?.enabled) {
     lines.push(
       "",

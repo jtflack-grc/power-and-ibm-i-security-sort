@@ -124,6 +124,9 @@ export function Layout({
     selected == null
       ? null
       : scopedFindings.find((f) => f.cve_id === selected.cve_id) ?? selected;
+  const selectedBulletin = selectedResolved?.bulletin_id
+    ? result?.bulletins?.find((bulletin) => bulletin.bulletin_id === selectedResolved.bulletin_id) ?? null
+    : null;
 
   const openFinding = (f: Finding) => {
     setSelected(f);
@@ -360,6 +363,7 @@ export function Layout({
             {!!findings.length && (
               <FindingsPanel
                 findings={findings}
+                bulletins={result?.bulletins}
                 selectedId={selectedResolved?.cve_id ?? null}
                 laneFilter={laneFilter}
                 onLaneFilter={setLaneFilter}
@@ -376,7 +380,7 @@ export function Layout({
             <div className="meta">{selectedResolved?.cve_id ?? "select one"}</div>
           </div>
           <div className="panel-body">
-            <IssueDetailPanel finding={selectedResolved} shop={shop} />
+            <IssueDetailPanel finding={selectedResolved} shop={shop} bulletin={selectedBulletin} generatedAt={result?.generated_at} />
           </div>
         </section>
 
@@ -409,7 +413,7 @@ export function Layout({
               </div>
             )}
             <PtfCommandCoach finding={selectedResolved} />
-            <VerificationRail finding={selectedResolved} />
+              <VerificationRail finding={selectedResolved} bulletin={selectedBulletin} />
           </div>
         </section>
       </main>

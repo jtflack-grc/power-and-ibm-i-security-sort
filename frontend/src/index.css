@@ -441,6 +441,23 @@ a {
   margin: 0 0 0.55rem;
 }
 
+.queue-select {
+  display: grid;
+  gap: 0.2rem;
+  color: var(--muted);
+  font: 0.62rem "IBM Plex Mono", monospace;
+  text-transform: uppercase;
+}
+
+.queue-select select {
+  border: 1px solid var(--line);
+  background: #060a08;
+  color: var(--white);
+  padding: 0.35rem 0.45rem;
+  font: 0.68rem "IBM Plex Mono", monospace;
+  text-transform: none;
+}
+
 .filter-hint {
   width: 100%;
   font-size: 0.78rem;
@@ -460,6 +477,38 @@ a {
   cursor: pointer;
   display: grid;
   gap: 0.3rem;
+}
+
+.bulletin-group {
+  border-bottom: 1px solid var(--line);
+}
+
+.bulletin-group.selected {
+  box-shadow: inset 2px 0 0 var(--green);
+}
+
+.bulletin-row {
+  width: 100%;
+  border: 0;
+  background: #070b09;
+  color: inherit;
+  padding: 0.85rem 0.75rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.bulletin-row:hover {
+  background: #0a110d;
+}
+
+.bulletin-cves {
+  border-top: 1px solid var(--line);
+  background: #030504;
+}
+
+.finding-row-child {
+  padding-left: 1.15rem;
+  border-left: 2px solid #20352c;
 }
 
 .finding-row:hover {
@@ -1820,6 +1869,22 @@ a {
   color: var(--muted);
   font-size: 0.78rem;
   line-height: 1.5;
+}
+
+.verification-applicability {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0 0.9rem 0.75rem;
+  color: var(--muted);
+  font: 0.68rem "IBM Plex Mono", monospace;
+}
+
+.verification-applicability select {
+  border: 1px solid var(--amber);
+  background: #050706;
+  color: var(--white);
+  padding: 0.45rem;
+  font: inherit;
 }
 
 .verification-frame-wrap {
