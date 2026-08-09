@@ -87,6 +87,28 @@ def test_psirt_can_apply_a_bulletin_publication_window():
     assert set(findings) == {"CVE-2026-10001"}
 
 
+def test_psirt_publication_cutoff_is_inclusive_and_excludes_undated_rows():
+    payload = {"results": [
+        {
+            "title": "Cutoff IBM i bulletin CVE-2025-10001",
+            "field_product": "IBM i",
+            "field_affected_products": "IBM i 7.5",
+            "field_pub_date": "2025-07-06",
+            "field_modified_date": "2026-08-01",
+            "field_published_url": "https://www.ibm.com/support/pages/node/10",
+        },
+        {
+            "title": "Undated IBM i bulletin CVE-2026-10002",
+            "field_product": "IBM i",
+            "field_affected_products": "IBM i 7.6",
+            "field_modified_date": "2026-08-01",
+            "field_published_url": "https://www.ibm.com/support/pages/node/11",
+        },
+    ]}
+    findings = parse_psirt_payload(payload, published_after="2025-07-06")
+    assert set(findings) == {"CVE-2025-10001"}
+
+
 def test_psirt_preserves_bulletin_membership_and_release_rows():
     payload = {"results": [{
         "title": "IBM i grouped bulletin [CVE-2026-10001, CVE-2026-10002]",
