@@ -167,6 +167,7 @@ async def build_live_result(
     on_progress: ProgressCb | None = None,
     check_cancelled: Callable[[], bool] | None = None,
     extra_notes: list[str] | None = None,
+    max_bulletin_fetches: int | None = 30,
 ) -> TriageResult:
     """Pull public feeds and return a ranked TriageResult (no job store / SSE)."""
     progress = on_progress or _noop_progress
@@ -368,14 +369,36 @@ async def build_live_result(
             96,
         )
         try:
-            await enrich_guidance(client, cache, ranked, max_bulletin_fetches=30)
+            guidance_stats = await enrich_guidance(
+                client,
+                cache,
+                ranked,
+                max_bulletin_fetches=max_bulletin_fetches,
+            )
+            loaded = guidance_stats["loaded"]
+            attempted = guidance_stats["attempted"]
+            packaged = (
+                guidance_stats["individual_ptf"]
+                + guidance_stats["group_ptf"]
+                + guidance_stats["apar"]
+            )
             feed_health.append(
                 {
                     "id": "guidance",
                     "label": "Resolve / Interim",
-                    "status": "ok",
-                    "detail": "built",
+                    "status": "ok" if loaded == attempted else "degraded",
+                    "detail": (
+                        f"{loaded}/{attempted} bulletin bodies · {packaged} packaged paths "
+                        f"({guidance_stats['individual_ptf']} PTF, "
+                        f"{guidance_stats['group_ptf']} group, {guidance_stats['apar']} APAR)"
+                    ),
                 }
+            )
+            await progress_checked(
+                "guidance",
+                f"Read {loaded}/{attempted} bulletin bodies; extracted {packaged} packaged paths.",
+                98,
+                guidance_stats,
             )
         except Exception as guide_exc:  # noqa: BLE001
             from app.scoring.guidance import attach_guidance

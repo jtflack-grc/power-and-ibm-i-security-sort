@@ -9,10 +9,17 @@ interface Props {
 export function PtfCommandCoach({ finding }: Props) {
   const evidence = useMemo(() => extractPtfEvidence(finding), [finding]);
   const ptf = evidence.ptfs[0] ?? null;
+  const group = evidence.groups[0] ?? null;
+  const apar = evidence.apars[0] ?? null;
   const product = evidence.productId;
   const displayCommand = ptf
     ? `DSPPTF LICPGM(${product}) SELECT(${ptf})`
-    : `DSPPTF LICPGM(${product}) SELECT(*NOTAPY)`;
+    : group
+      ? `WRKPTFGRP PTFGRP(${group})`
+      : apar
+        ? apar
+        : `DSPPTF LICPGM(${product}) SELECT(*NOTAPY)`;
+  const route = ptf ? "individual PTF" : group ? "group PTF" : apar ? "APAR / iFix" : "fix research";
 
   return (
     <section className="command-coach" aria-labelledby="command-coach-title">
@@ -22,26 +29,32 @@ export function PtfCommandCoach({ finding }: Props) {
           <h3 id="command-coach-title">From finding to partition evidence</h3>
         </div>
         <p>
-          {ptf
-            ? `${finding?.cve_id}: start with ${ptf}, then widen the check.`
-            : "Select a PTF-tagged finding to hydrate the individual check."}
+          {finding ? `${finding.cve_id}: ${route} route.` : "Select a finding to hydrate its evidence route."}
         </p>
       </div>
       <div className="command-coach-steps">
         <article className="command-coach-step is-primary">
           <span className="command-coach-number">01 · Locate</span>
           <code>{displayCommand}</code>
-          <p>{ptf ? "Confirm product, release, PTF status, and IPL action." : "List PTFs not applied or superseded for this product."}</p>
+          <p>
+            {ptf
+              ? "Confirm product, release, PTF status, and IPL action."
+              : group
+                ? "Confirm group level, target release, and installed status."
+                : apar
+                  ? "Carry the exact APAR into IBM Support and resolve its iFix or fix-pack target."
+                  : "List unapplied PTFs while the exact bulletin package is being resolved."}
+          </p>
         </article>
         <article className="command-coach-step">
           <span className="command-coach-number">02 · Inspect</span>
-          <code>5=Display PTF details</code>
-          <p>Read general information and cover-letter instructions; detail navigation remains source-gated below.</p>
+          <code>{ptf ? "5=Display PTF details" : "Match product · release · installed level"}</code>
+          <p>{ptf ? "Read general information and cover-letter instructions; detail navigation remains source-gated below." : "Do not treat a CVE, APAR, group, and downloadable fix as interchangeable identifiers."}</p>
         </article>
         <article className="command-coach-step">
           <span className="command-coach-number">03 · Widen</span>
-          <code>WRKPTFGRP PTFGRP(*ALL)</code>
-          <p>Check group level and status. One applied PTF does not establish group currency.</p>
+          <code>{group ? "5=Display PTF group" : "WRKPTFGRP PTFGRP(*ALL)"}</code>
+          <p>{group ? "Use option 5 on the selected group; its full screen remains source-gated." : "Check group context. One applied fix does not establish group currency."}</p>
         </article>
       </div>
     </section>

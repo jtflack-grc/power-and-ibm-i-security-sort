@@ -1695,6 +1695,111 @@ a {
   border: 0;
 }
 
+.verification-assist-wrap {
+  border: 1px solid #284238;
+  background: #020403;
+  overflow: auto;
+}
+
+.remediation-assist {
+  min-height: 100%;
+  padding: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.remediation-assist-lead h4 {
+  margin: 0.2rem 0 0.4rem;
+  color: var(--white);
+  font-size: 1.05rem;
+  font-weight: 500;
+}
+
+.remediation-assist-lead > p:last-child,
+.remediation-summary p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+  font-size: 0.8rem;
+}
+
+.remediation-token-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 0.55rem;
+}
+
+.remediation-token {
+  border: 1px solid var(--line);
+  padding: 0.7rem;
+  display: grid;
+  gap: 0.45rem;
+  background: #08100c;
+}
+
+.remediation-token span,
+.remediation-summary > span {
+  color: var(--muted);
+  font: 0.65rem "IBM Plex Mono", monospace;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.remediation-token code {
+  color: var(--green);
+  font: 0.77rem/1.4 "IBM Plex Mono", monospace;
+  overflow-wrap: anywhere;
+}
+
+.remediation-token button {
+  justify-self: start;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  padding: 0.3rem 0.45rem;
+  font: 0.66rem "IBM Plex Mono", monospace;
+  cursor: pointer;
+}
+
+.remediation-token button:hover {
+  border-color: var(--green);
+  color: var(--green);
+}
+
+.remediation-summary {
+  border-left: 2px solid var(--amber);
+  padding: 0.7rem 0.8rem;
+  background: rgba(212, 160, 69, 0.05);
+}
+
+.remediation-summary p {
+  margin-top: 0.35rem;
+}
+
+.remediation-checklist {
+  margin: 0;
+  padding: 0 0 0 1.25rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.55;
+}
+
+.remediation-links {
+  margin-top: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.remediation-links a {
+  border: 1px solid var(--line);
+  color: var(--green);
+  padding: 0.4rem 0.55rem;
+  font: 0.68rem "IBM Plex Mono", monospace;
+  text-decoration: none;
+}
+
 @media (max-width: 700px) {
   .shop-grid {
     grid-template-columns: 1fr;

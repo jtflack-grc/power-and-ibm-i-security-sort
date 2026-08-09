@@ -96,15 +96,10 @@ def classify_risk_surface(finding: Finding) -> RiskSurface:
 def _has_package_fix(finding: Finding) -> bool:
     for step in finding.resolution_steps or []:
         kind = str(step.get("kind", "")).lower()
-        if kind in {"ptf", "apar", "bulletin", "summary"}:
-            # "unknown" kinds don't count; bulletin alone is a package path
-            if kind == "summary" and "no packaged" in str(step.get("detail", "")).lower():
-                continue
+        if kind in {"ptf", "ptf_group", "apar", "fixpack"}:
             return True
         title = str(step.get("title", "")).lower()
         if title.startswith("ptf ") or title.startswith("apar "):
-            return True
-        if "security bulletin" in title:
             return True
     return False
 

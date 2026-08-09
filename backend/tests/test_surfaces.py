@@ -55,3 +55,20 @@ def test_action_lane_contain_without_package():
         ],
     )
     assert assign_action_lane(f) == "contain"
+
+
+def test_bulletin_link_alone_is_not_a_packaged_fix():
+    f = Finding(
+        cve_id="CVE-2099-1005",
+        title="Bulletin only",
+        description="The vendor URL exists, but no fix identifier was extracted.",
+        bucket=Bucket.WATCH,
+        platforms=[PlatformHit(platform=Platform.IBM_I)],
+        resolution_steps=[
+            {"title": "IBM Security Bulletin", "detail": "Source", "kind": "bulletin"}
+        ],
+        interim_mitigations=[
+            {"title": "Constrain exposure", "detail": "ACL", "kind": "interim"}
+        ],
+    )
+    assert assign_action_lane(f) == "contain"

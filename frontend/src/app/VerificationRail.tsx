@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Finding } from "../types";
 import { extractPtfEvidence } from "../ptfEvidence";
+import { RemediationAssist } from "./RemediationAssist";
 
 interface Props {
   finding: Finding | null;
@@ -54,7 +55,9 @@ export function VerificationRail({ finding }: Props) {
           >
             Sources &amp; boundary
           </button>
-          <span className="verification-state">DSPPTF status validated</span>
+          <span className="verification-state">
+            {hasPtfPath ? "DSPPTF status validated" : "Guided evidence route"}
+          </span>
         </div>
       </div>
       {showSources && (
@@ -74,19 +77,25 @@ export function VerificationRail({ finding }: Props) {
         {finding
           ? hasPtfPath
             ? `${finding.cve_id} has a PTF path. The IBM-sourced DSPPTF status panel is interactive; detail navigation remains source-gated.`
-            : `${finding.cve_id} does not yet have an extracted PTF identifier, so no terminal verification is offered.`
+            : `${finding.cve_id} does not resolve to an individual PTF. The evidence workspace below is routed by the remediation type IBM published.`
           : "Select a finding to assess whether an IBM i verification scenario applies."}
       </p>
-      <div className="verification-frame-wrap">
-        <iframe
-          ref={frameRef}
-          className="verification-frame"
-          src="./ironterm/index.html"
-          title="IronTerm TN5250 scenario terminal"
-          sandbox="allow-scripts allow-same-origin"
-          referrerPolicy="no-referrer"
-        />
-      </div>
+      {hasPtfPath ? (
+        <div className="verification-frame-wrap">
+          <iframe
+            ref={frameRef}
+            className="verification-frame"
+            src="./ironterm/index.html"
+            title="IronTerm TN5250 scenario terminal"
+            sandbox="allow-scripts allow-same-origin"
+            referrerPolicy="no-referrer"
+          />
+        </div>
+      ) : (
+        <div className="verification-frame-wrap verification-assist-wrap">
+          <RemediationAssist finding={finding} />
+        </div>
+      )}
     </section>
   );
 }

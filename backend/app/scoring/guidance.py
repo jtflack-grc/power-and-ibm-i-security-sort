@@ -11,6 +11,7 @@ All scraped/external text is sanitized before storage or display.
 
 from __future__ import annotations
 
+import asyncio
 import re
 from typing import Any
 from urllib.parse import urlparse
@@ -58,6 +59,15 @@ def _hydrate_fix_tokens(record: dict[str, Any]) -> dict[str, Any]:
         {str(value).upper() for value in record.get("ptf_groups") or []}
         | {value.upper() for value in GROUP_PTF_TOKEN_RE.findall(blob)}
     )[:20]
+    if "body_loaded" not in record:
+        record["body_loaded"] = bool(
+            record.get("summary")
+            or record.get("affected")
+            or record.get("fix_snippets")
+            or record.get("ptfs")
+            or record.get("ptf_groups")
+            or record.get("apars")
+        )
     return record
 
 
@@ -179,6 +189,7 @@ async def scrape_bulletin_fixes(
         "fix_snippets": [],
         "summary": None,
         "affected": None,
+        "body_loaded": False,
     }
     if not _is_allowed_bulletin_fetch(url):
         cache.set(cache_key, record)
@@ -201,6 +212,9 @@ async def scrape_bulletin_fixes(
             return record
         soup = BeautifulSoup(resp.text, "lxml")
         text = _sanitize(soup.get_text(" ", strip=True), limit=20000)
+        if "site unavailable" in text.lower() or len(text) < 240:
+            return record
+        record["body_loaded"] = True
         # Prefer table cells — IBM bulletins often list PTFs in remediation tables
         table_blob = " ".join(
             td.get_text(" ", strip=True)
@@ -423,20 +437,40 @@ async def enrich_guidance(
     client: httpx.AsyncClient,
     cache: DiskCache,
     findings: list[Finding],
-    max_bulletin_fetches: int = 30,
-) -> None:
-    """Populate remediation fields; fetch bulletin HTML for top findings first."""
+    max_bulletin_fetches: int | None = 30,
+    concurrency: int = 4,
+) -> dict[str, int]:
+    """Populate remediation fields and report honest bulletin-body coverage."""
     ranked = sorted(
         findings,
         key=lambda f: (0 if f.on_kev else 1, 0 if f.bucket.value == "urgent" else 1, -(f.score or 0)),
     )
-    fetched = 0
+    candidates = [f for f in ranked if f.ibm_bulletin_url]
+    selected = candidates if max_bulletin_fetches is None else candidates[:max_bulletin_fetches]
+    selected_urls = list(dict.fromkeys(f.ibm_bulletin_url for f in selected if f.ibm_bulletin_url))
+    semaphore = asyncio.Semaphore(max(1, min(concurrency, 8)))
+
+    async def fetch_one(url: str) -> tuple[str, dict[str, Any]]:
+        async with semaphore:
+            bulletin = await scrape_bulletin_fixes(client, cache, url)
+            return url, bulletin
+
+    records = dict(await asyncio.gather(*(fetch_one(url) for url in selected_urls)))
     for f in ranked:
-        bulletin: dict[str, Any] = {}
-        if (
-            f.ibm_bulletin_url
-            and fetched < max_bulletin_fetches
-        ):
-            bulletin = await scrape_bulletin_fixes(client, cache, f.ibm_bulletin_url)
-            fetched += 1
-        attach_guidance(f, bulletin)
+        attach_guidance(f, records.get(f.ibm_bulletin_url or "", {}))
+
+    return {
+        "linked": len(candidates),
+        "unique_linked": len({f.ibm_bulletin_url for f in candidates}),
+        "attempted": len(selected_urls),
+        "loaded": sum(1 for record in records.values() if record.get("body_loaded")),
+        "individual_ptf": sum(
+            1 for f in ranked if any(str(s.get("kind")) == "ptf" for s in f.resolution_steps)
+        ),
+        "group_ptf": sum(
+            1 for f in ranked if any(str(s.get("kind")) == "ptf_group" for s in f.resolution_steps)
+        ),
+        "apar": sum(
+            1 for f in ranked if any(str(s.get("kind")) == "apar" for s in f.resolution_steps)
+        ),
+    }
