@@ -276,14 +276,14 @@ def parse_psirt_payload(
     return parse_psirt_bundle(payload, published_after=published_after).findings
 
 
-async def collect_ibmi_psirt(
-    client: httpx.AsyncClient, cache: DiskCache, *, days_back: int = 400
-) -> dict[str, Finding]:
+async def _load_psirt_payload(
+    client: httpx.AsyncClient, cache: DiskCache
+) -> Any:
+    """Return cached or freshly downloaded PSIRT JSON without a cache round-trip."""
     cache_key = "ibm_psirt:ibm-i:v1"
     cached = cache.get(cache_key)
-    cutoff = (datetime.now(timezone.utc) - timedelta(days=max(1, days_back))).date().isoformat()
     if cached is not None:
-        return parse_psirt_payload(cached, published_after=cutoff)
+        return cached
 
     body = bytearray()
     async with client.stream(
@@ -300,7 +300,10 @@ async def collect_ibmi_psirt(
         response.raise_for_status()
         content_type = response.headers.get("content-type", "").lower()
         if "json" not in content_type:
-            raise ValueError("IBM PSIRT search returned a non-JSON response")
+            raise ValueError(
+                "IBM PSIRT search returned non-JSON content "
+                f"({content_type or 'missing content-type'}, HTTP {response.status_code})"
+            )
         declared = int(response.headers.get("content-length") or 0)
         if declared > _MAX_RESPONSE_BYTES:
             raise ValueError("IBM PSIRT search response exceeded the size limit")
@@ -311,6 +314,14 @@ async def collect_ibmi_psirt(
     payload = json.loads(body)
     _validate_payload_contract(payload)
     cache.set(cache_key, payload)
+    return payload
+
+
+async def collect_ibmi_psirt(
+    client: httpx.AsyncClient, cache: DiskCache, *, days_back: int = 400
+) -> dict[str, Finding]:
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=max(1, days_back))).date().isoformat()
+    payload = await _load_psirt_payload(client, cache)
     return parse_psirt_payload(payload, published_after=cutoff)
 
 
@@ -318,15 +329,9 @@ async def collect_ibmi_psirt_bundle(
     client: httpx.AsyncClient, cache: DiskCache, *, days_back: int = 400
 ) -> PsirtBundle:
     """Collect the same bounded PSIRT feed while retaining bulletin structure."""
-    cache_key = "ibm_psirt:ibm-i:v1"
-    cached = cache.get(cache_key)
     cutoff = (datetime.now(timezone.utc) - timedelta(days=max(1, days_back))).date().isoformat()
-    if cached is None:
-        await collect_ibmi_psirt(client, cache, days_back=days_back)
-        cached = cache.get(cache_key)
-    if cached is None:
-        return PsirtBundle(findings={}, bulletins=[])
-    return parse_psirt_bundle(cached, published_after=cutoff)
+    payload = await _load_psirt_payload(client, cache)
+    return parse_psirt_bundle(payload, published_after=cutoff)
 
 
 def enrich_psirt_from_nvd(
