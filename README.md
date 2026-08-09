@@ -1,8 +1,11 @@
-# Power System Vulnerability Curator
+# IBM Power & Z Vulnerability Curator
 
-A portfolio artifact that **translates GRC / vuln-management language into Power systems work** — IBM i, AIX, Linux on Power, and z/OS.
+A portfolio artifact that **translates GRC / vulnerability-management language into IBM enterprise systems work** across two distinct platform families:
 
-Live-pulls public intel, sorts with explainable **counter-levers** (so CVSS alone cannot drown the queue), then docks each finding into **Apply / Contain / Monitor** with Resolve (PTF / Fix Central) vs Interim controls.
+- **IBM Power:** IBM i, AIX, Linux on Power
+- **IBM Z:** z/OS
+
+It live-pulls public intel, sorts with explainable **counter-levers** (so CVSS alone cannot drown the queue), then docks each finding into **Apply / Contain / Monitor** with Resolve (PTF / APAR / Fix Central) vs Interim controls.
 
 Front door: [jtflack-grc.github.io/portfolio](https://jtflack-grc.github.io/portfolio/)
 
@@ -10,7 +13,7 @@ Front door: [jtflack-grc.github.io/portfolio](https://jtflack-grc.github.io/port
 
 | GRC / security side | Systems side |
 |---------------------|--------------|
-| CISA KEV, EPSS, OWASP, CVSS | Baileywick filters (IBM i / AIX / z/OS / Linux on Power) |
+| CISA KEV, EPSS, OWASP, CVSS | Platform filters: IBM Power (IBM i / AIX / Linux on Power) and IBM Z (z/OS) |
 | Priority buckets | Work docks: Apply · Contain · Monitor |
 | “Why does this matter?” levers | Resolve: bulletin / PTF / APAR / Fix Central / verify-on-box |
 | Threat tempering | Interim: authority, exposure, TLS, PSP currency |
@@ -29,7 +32,7 @@ Front door: [jtflack-grc.github.io/portfolio](https://jtflack-grc.github.io/port
 
 | Panel | Purpose |
 |-------|---------|
-| Findings | Baileywick + priority filters; curated queue |
+| Findings | Platform + priority filters; curated queue |
 | Issue | Overview + **Resolve** / **Interim** deep dive |
 | Visual | Work docks — click to filter by Apply / Contain / Monitor |
 
@@ -106,7 +109,7 @@ Story in one line: GRC language (CVSS / OWASP access-control) becomes systems wo
 
 ## Portfolio card copy
 
-**Power System Vulnerability Curator** — Curates public IBM i / AIX / Power / z/OS CVEs into Apply, Contain, or Monitor — with guided routing questions, PTF/Fix Central resolve paths, interim controls, optional browser-only shop context + paste, feed honesty, and ticket-ready change packets. Pages serves a scheduled live snapshot (no open API). Flagship walkthrough: CVE-2024-25050. Not a scanner of record.
+**IBM Power & Z Vulnerability Curator** — Curates public vulnerability intelligence for IBM Power (IBM i, AIX, Linux on Power) and IBM Z (z/OS) into Apply, Contain, or Monitor — with guided routing questions, PTF/APAR/Fix Central resolve paths, interim controls, optional browser-only shop context + paste, feed honesty, and ticket-ready change packets. Pages serves a scheduled live snapshot (no open API). Flagship walkthrough: CVE-2024-25050. Not a scanner of record.
 
 ## Static Pages deploy (scheduled live snapshot)
 
@@ -140,6 +143,6 @@ IBM Plex + OLED black grounds. Green and amber stay on strokes and accents only 
 
 ## Honesty
 
-Practice / portfolio demo. Public feeds only. External advisory text is sanitized and untrusted. PTF extraction is best-effort from public bulletins — always confirm on Fix Central and your release matrix before change.
+Practice / portfolio demo. Public feeds only. External advisory text is sanitized and untrusted. PTF/APAR extraction is best-effort from public bulletins — always confirm on Fix Central and your release matrix before change.
 
 Pre-publish checklist: [`SHIP_SAFETY.md`](SHIP_SAFETY.md).
