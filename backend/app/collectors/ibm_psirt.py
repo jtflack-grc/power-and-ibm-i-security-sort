@@ -176,6 +176,17 @@ def _records(payload: Any) -> list[dict[str, Any]]:
     return [row for row in rows[:_MAX_RESULTS] if isinstance(row, dict)]
 
 
+def _validate_payload_contract(payload: Any) -> None:
+    if not isinstance(payload, dict) or not isinstance(payload.get("results"), list):
+        raise ValueError("IBM PSIRT search returned an unexpected response shape")
+    rows = [row for row in payload["results"] if isinstance(row, dict)]
+    if not rows:
+        return
+    required_signals = ("field_product", "field_affected_products", "field_published_url")
+    if not any(all(key in row for key in required_signals) for row in rows):
+        raise ValueError("IBM PSIRT search schema changed: required bulletin fields are absent")
+
+
 def parse_psirt_bundle(
     payload: Any, *, published_after: str | None = None
 ) -> PsirtBundle:
@@ -298,8 +309,7 @@ async def collect_ibmi_psirt(
             if len(body) > _MAX_RESPONSE_BYTES:
                 raise ValueError("IBM PSIRT search response exceeded the size limit")
     payload = json.loads(body)
-    if not isinstance(payload, dict) or not isinstance(payload.get("results"), list):
-        raise ValueError("IBM PSIRT search returned an unexpected response shape")
+    _validate_payload_contract(payload)
     cache.set(cache_key, payload)
     return parse_psirt_payload(payload, published_after=cutoff)
 

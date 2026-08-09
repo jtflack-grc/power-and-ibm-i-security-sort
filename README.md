@@ -28,13 +28,14 @@ Front door: [jtflack-grc.github.io/portfolio](https://jtflack-grc.github.io/port
 2. Scores with up *and* down counter-levers ([`backend/app/scoring/ranker.py`](backend/app/scoring/ranker.py))
 3. Distinguishes IBM i-native from supply-chain / TPRM surface
 4. Builds Resolve + Interim cards (including Fix Central / support search when scrape is thin)
-5. UI: **Findings · Issue · Actions + 5250 verification**
+5. Groups remediation work by IBM bulletin while retaining individual CVE scoring
+6. UI: **Findings · Issue · Actions + 5250 verification**
 
 ## Panels
 
 | Panel | Purpose |
 |-------|---------|
-| Findings | Priority and action filters; curated IBM i queue |
+| Findings | Bulletin-first queue with expandable CVEs, release/remedy filters, and recent/new views |
 | Issue | Overview + **Resolve** / **Interim** deep dive |
 | Actions | Work docks plus a transport-free IronTerm TN5250 verification rail |
 
@@ -63,7 +64,7 @@ KEV escalates hard. EPSS can raise *or* temper high CVSS. OWASP is context, not 
 ## Security / no-keys stance
 
 - **Published feeds are the Pages default.** A daily GitHub Action uses IBM PSIRT as the discovery authority, enriches those findings from public CISA / NVD / FIRST data, and ships `live-triage.json` inside the static site. No open triage API. No keys in the SPA.
-- **Sample remains the offline fallback.** `frontend/public/sample-triage.json` ships for walkthroughs when the snapshot step fails or you want the flagship story.
+- **Sample remains an explicit offline walkthrough.** It never automatically replaces a healthy PSIRT snapshot.
 - **Shop context stays in the browser** (`sessionStorage`). Personas and answers never POST to a server.
 - **On-demand live feeds are local/Docker only** (FastAPI). They call the same public sources. Optional `NVD_API_KEY` may be set as a **repo Actions secret** for fuller scheduled NVD pulls, or in the local shell — never embedded in a public deploy.
 - **Keyless NVD uses a slim recipe** (~8 queries, 1 page) so cold refreshes finish far faster; disk cache skips politeness delays on repeat. Successful local live runs persist a **last-good snapshot** served instantly on the next Live click while a refresh continues in the background.
@@ -139,7 +140,9 @@ GitHub Action [`.github/workflows/pages.yml`](.github/workflows/pages.yml) runs 
 2. Builds `frontend/dist` with `vite --base=./`
 3. Publishes to GitHub Pages
 
-If the snapshot step fails, the site still deploys with the curated sample fixture only.
+If PSIRT is unhealthy, materially narrow, or loses bulletin membership, the workflow stops before deployment. Pages retains the prior build rather than publishing an NVD fallback over a healthy PSIRT snapshot.
+
+See [`ARCHITECTURE.md`](ARCHITECTURE.md) and [`THREAT_MODEL.md`](THREAT_MODEL.md) for the data flow, trust boundaries, and failure behavior.
 
 Optional: add repo secret `NVD_API_KEY` for a fuller NVD recipe in Actions (never baked into the SPA).
 

@@ -1,4 +1,5 @@
-from app.collectors.ibm_psirt import enrich_psirt_from_nvd, parse_psirt_bundle, parse_psirt_payload
+from app.collectors.ibm_psirt import _validate_payload_contract, enrich_psirt_from_nvd, parse_psirt_bundle, parse_psirt_payload
+import pytest
 from app.models import Finding, Platform, PlatformHit
 
 
@@ -125,3 +126,12 @@ def test_psirt_release_parser_does_not_treat_unrelated_digits_as_releases():
     row = parse_psirt_bundle(payload).bulletins[0].applicability[0]
     assert row.release is None
     assert row.release_system is None
+
+
+def test_psirt_contract_rejects_missing_bulletin_fields():
+    with pytest.raises(ValueError, match="schema changed"):
+        _validate_payload_contract({"results": [{"unexpected": "shape"}]})
+
+
+def test_psirt_contract_allows_empty_results_for_publication_gate_to_handle():
+    _validate_payload_contract({"results": []})
