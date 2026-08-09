@@ -67,7 +67,7 @@ npm run build
 
 ## 5. Deploy modes
 
-1. **Portfolio (default):** GitHub Pages → scheduled `live-triage.json` snapshot (daily Action). Sample fixture fallback if snapshot fails. No open triage API.
+1. **Portfolio (default):** GitHub Pages → guarded PSIRT snapshot. Failed or materially narrow refreshes stop before deployment, preserving the prior Pages build. No open triage API.
 2. **Local live:** `uvicorn` on `127.0.0.1:8000` with optional `NVD_API_KEY` in the **shell env**, never baked into the SPA.
 3. **Docker:** fine for controlled demos; not the public internet without auth/rate limits.
 

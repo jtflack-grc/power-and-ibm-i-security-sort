@@ -1,5 +1,5 @@
 # Build static SPA with a scheduled live-triage.json snapshot (no open API).
-name: Pages sample deploy
+name: PSIRT-curated Pages deploy
 
 on:
   workflow_dispatch:
@@ -7,7 +7,7 @@ on:
     # Daily refresh of public intel snapshot for Pages visitors.
     - cron: "15 12 * * *"
   push:
-    branches: [main, agent/ibmi-ironterm-preview]
+    branches: [main]
     paths:
       - "frontend/**"
       - "backend/**"
@@ -48,6 +48,19 @@ jobs:
           python -m app.scripts.refresh_live_snapshot --force-refresh
           test -f frontend/public/live-triage.json
           echo "Live snapshot ready for Pages bundle."
+
+      - name: Record snapshot summary
+        run: |
+          python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          from pathlib import Path
+          data = json.loads(Path("frontend/public/live-triage.json").read_text())
+          print("## Published PSIRT snapshot")
+          print(f"- Schema: {data.get('schema_version')}")
+          print(f"- Generated: {data.get('generated_at')}")
+          print(f"- IBM bulletins: {len(data.get('bulletins') or [])}")
+          print(f"- Individual CVEs: {len(data.get('findings') or [])}")
+          PY
 
       - uses: actions/setup-node@v4
         with:

@@ -1499,6 +1499,15 @@ a {
   margin-bottom: 0.4rem;
 }
 
+.feed-stale {
+  margin: 0.55rem 0 0;
+  border-left: 2px solid var(--amber);
+  padding: 0.45rem 0.6rem;
+  color: var(--amber);
+  font-size: 0.72rem;
+  line-height: 1.45;
+}
+
 .feed-health-aside .feed-health-head > span:first-child {
   font-family: "IBM Plex Mono", monospace;
   font-size: 0.7rem;
