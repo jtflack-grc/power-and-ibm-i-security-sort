@@ -1,27 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ActionLane } from "./ActionLanesFlow";
-import type { Bucket, Finding, Platform } from "../types";
+import type { Bucket, Finding } from "../types";
 import { PLATFORM_LABELS } from "../types";
 
 interface Props {
   findings: Finding[];
   selectedId: string | null;
   onSelect: (f: Finding) => void;
-  platformFilter: Platform | "all";
-  onPlatformFilter: (p: Platform | "all") => void;
   laneFilter: ActionLane | "all";
   onLaneFilter: (lane: ActionLane | "all") => void;
   pasteHitIds?: string[];
 }
 
 const BUCKETS: Array<Bucket | "all"> = ["all", "urgent", "watch", "low"];
-const PLATFORMS: Array<Platform | "all"> = [
-  "all",
-  "ibm_i",
-  "aix",
-  "zos",
-  "linux_on_power",
-];
 const FOCUS_LIMIT = 40;
 /** Match backend RankerConfig.ancient_days (~7y). */
 const MUSEUM_AGE_DAYS = 2555;
@@ -49,8 +40,6 @@ export function FindingsPanel({
   findings,
   selectedId,
   onSelect,
-  platformFilter,
-  onPlatformFilter,
   laneFilter,
   onLaneFilter,
   pasteHitIds = [],
@@ -64,12 +53,6 @@ export function FindingsPanel({
   const filtered = useMemo(() => {
     return findings.filter((f) => {
       if (bucket !== "all" && f.bucket !== bucket) return false;
-      if (
-        platformFilter !== "all" &&
-        !f.platforms.some((p) => p.platform === platformFilter)
-      ) {
-        return false;
-      }
       if (laneFilter !== "all" && (f.action_lane ?? "monitor") !== laneFilter) {
         return false;
       }
@@ -81,7 +64,7 @@ export function FindingsPanel({
       }
       return true;
     });
-  }, [findings, bucket, platformFilter, laneFilter, includeOlder, selectedId, pasteHitIds]);
+  }, [findings, bucket, laneFilter, includeOlder, selectedId, pasteHitIds]);
 
   const olderHidden = useMemo(() => {
     if (includeOlder) return 0;
@@ -90,18 +73,12 @@ export function FindingsPanel({
       if (selectedId === f.cve_id) return false;
       if (pasteHitIds.includes(f.cve_id)) return false;
       if (bucket !== "all" && f.bucket !== bucket) return false;
-      if (
-        platformFilter !== "all" &&
-        !f.platforms.some((p) => p.platform === platformFilter)
-      ) {
-        return false;
-      }
       if (laneFilter !== "all" && (f.action_lane ?? "monitor") !== laneFilter) {
         return false;
       }
       return true;
     }).length;
-  }, [findings, includeOlder, selectedId, pasteHitIds, bucket, platformFilter, laneFilter]);
+  }, [findings, includeOlder, selectedId, pasteHitIds, bucket, laneFilter]);
 
   const visible = useMemo(() => {
     if (showAll || filtered.length <= FOCUS_LIMIT) return filtered;
@@ -122,7 +99,7 @@ export function FindingsPanel({
     root.scrollTo({ top: 0 });
     const pane = root.closest(".panel-body");
     if (pane instanceof HTMLElement) pane.scrollTo({ top: 0 });
-  }, [findings, platformFilter, bucket, laneFilter, includeOlder]);
+  }, [findings, bucket, laneFilter, includeOlder]);
 
   // Only scroll a row into view after deliberate keyboard moves (not auto-select on load).
   useEffect(() => {
@@ -166,22 +143,6 @@ export function FindingsPanel({
         }
       }}
     >
-      <div className="findings-filters">
-        <div className="filter-row-label">Platform</div>
-        {PLATFORMS.map((p) => (
-          <button
-            key={p}
-            type="button"
-            className={`chip chip-platform ${platformFilter === p ? "active" : ""}`}
-            onClick={() => onPlatformFilter(p)}
-          >
-            {p === "all" ? "All platforms" : PLATFORM_LABELS[p]}
-          </button>
-        ))}
-      </div>
-      {platformFilter === "all" && (
-        <div className="filter-hint">Start wide — chip a platform when you want the rail narrower.</div>
-      )}
       <div className="findings-filters">
         <div className="filter-row-label">Priority</div>
         {BUCKETS.map((b) => (
@@ -277,7 +238,7 @@ export function FindingsPanel({
         );
       })}
       {filtered.length === 0 && (
-        <div className="empty-state">No findings in this platform / dock / priority cut.</div>
+        <div className="empty-state">No findings in this dock / priority cut.</div>
       )}
     </div>
   );

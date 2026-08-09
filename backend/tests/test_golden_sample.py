@@ -7,8 +7,6 @@ from pathlib import Path
 
 from app.models import Finding
 from app.scoring.guidance import attach_guidance
-from app.scoring.ranker import apply_levers
-from app.scoring.surfaces import annotate_surfaces
 
 SAMPLE = (
     Path(__file__).resolve().parents[2] / "frontend" / "public" / "sample-triage.json"
@@ -50,13 +48,8 @@ def test_attach_guidance_idempotent_on_fixture():
     assert out.interim_mitigations
 
 
-def test_re_rank_museum_cve_stays_lowish():
-    findings = {f.cve_id: f for f in _load_findings()}
-    f = findings["CVE-2019-1010022"]
-    # Strip precomputed score path — re-apply levers from signals
-    f.score = 0
-    f.levers = []
-    apply_levers(f)
-    annotate_surfaces([f])
-    assert f.bucket.value in {"low", "watch"}
-    assert f.action_lane in {"monitor", "contain"}
+def test_every_fixture_finding_is_ibm_i_only():
+    findings = _load_findings()
+    assert findings
+    for finding in findings:
+        assert {hit.platform.value for hit in finding.platforms} == {"ibm_i"}

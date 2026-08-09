@@ -57,7 +57,7 @@ def test_attach_guidance_always_has_fix_central():
         cve_id="CVE-2099-2000",
         title="Test",
         description="Test finding",
-        platforms=[PlatformHit(platform=Platform.AIX, match_strength="cpe")],
+        platforms=[PlatformHit(platform=Platform.IBM_I, match_strength="cpe")],
     )
     out = attach_guidance(f, {})
     kinds = {str(s.get("kind")) for s in out.resolution_steps}

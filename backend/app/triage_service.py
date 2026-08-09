@@ -260,7 +260,7 @@ async def build_live_result(
             )
             if not findings:
                 notes.append(
-                    "NVD returned no Power-family CVEs in window — try sample mode or Refresh live later."
+                    "NVD returned no IBM i CVEs in the window — try sample mode or refresh later."
                 )
         except TriageCancelled:
             raise
@@ -277,7 +277,7 @@ async def build_live_result(
             notes.append(f"NVD failed: {nvd_exc}")
         await progress_checked(
             "nvd",
-            f"Merged {len(findings)} unique CVEs across Power platforms.",
+            f"Merged {len(findings)} unique IBM i CVEs.",
             55,
             {"unique_cves": len(findings)},
         )

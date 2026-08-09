@@ -1,9 +1,10 @@
-# IBM Power & Z Vulnerability Curator
+# IBM i Vulnerability Curator
 
-A portfolio artifact that **translates GRC / vulnerability-management language into IBM enterprise systems work** across two distinct platform families:
+A portfolio artifact that **translates public vulnerability intelligence into IBM i remediation and verification work**.
 
-- **IBM Power:** IBM i, AIX, Linux on Power
-- **IBM Z:** z/OS
+The curator is intentionally IBM i-only. It preserves explainable prioritization and
+Apply / Contain / Monitor routing, then introduces a source-validated 5250 verification
+rail for findings with an applicable PTF path.
 
 It live-pulls public intel, sorts with explainable **counter-levers** (so CVSS alone cannot drown the queue), then docks each finding into **Apply / Contain / Monitor** with Resolve (PTF / APAR / Fix Central) vs Interim controls.
 
@@ -13,10 +14,11 @@ Front door: [jtflack-grc.github.io/portfolio](https://jtflack-grc.github.io/port
 
 | GRC / security side | Systems side |
 |---------------------|--------------|
-| CISA KEV, EPSS, OWASP, CVSS | Platform filters: IBM Power (IBM i / AIX / Linux on Power) and IBM Z (z/OS) |
+| CISA KEV, EPSS, OWASP, CVSS | IBM i applicability and product/release evidence |
 | Priority buckets | Work docks: Apply · Contain · Monitor |
 | “Why does this matter?” levers | Resolve: bulletin / PTF / APAR / Fix Central / verify-on-box |
 | Threat tempering | Interim: authority, exposure, TLS, PSP currency |
+| Vendor remedy | Synthetic 5250 verification using validated PTF screen fixtures |
 
 **This is not a scanner replacement.** It is a curator that sits between risk language and change work.
 
@@ -24,17 +26,35 @@ Front door: [jtflack-grc.github.io/portfolio](https://jtflack-grc.github.io/port
 
 1. Pulls **CISA KEV**, **NVD**, **FIRST EPSS**, maps **OWASP Top 10** via CWE, resolves **IBM Security Bulletins** when possible
 2. Scores with up *and* down counter-levers ([`backend/app/scoring/ranker.py`](backend/app/scoring/ranker.py))
-3. Tags platform-native vs supply-chain / TPRM surface
+3. Distinguishes IBM i-native from supply-chain / TPRM surface
 4. Builds Resolve + Interim cards (including Fix Central / support search when scrape is thin)
-5. UI: **Findings · Issue · Work docks**
+5. UI: **Findings · Issue · Actions + 5250 verification**
 
 ## Panels
 
 | Panel | Purpose |
 |-------|---------|
-| Findings | Platform + priority filters; curated queue |
+| Findings | Priority and action filters; curated IBM i queue |
 | Issue | Overview + **Resolve** / **Interim** deep dive |
-| Visual | Work docks — click to filter by Apply / Contain / Monitor |
+| Actions | Work docks plus a transport-free IronTerm TN5250 verification rail |
+
+## 5250 scenario mode
+
+The Pages application does not connect to an IBM i, accept credentials, or run
+websockify. It vendors the TN5250 implementation from
+[bencz/IronTerm](https://github.com/bencz/IronTerm) at a pinned commit and replaces
+the live WebSocket/Telnet lifecycle with a deterministic scenario boundary.
+
+Retained IronTerm capabilities include the 5250 presentation space, EBCDIC codec,
+inbound parser, outbound builder, field behavior, AID keys, cursor rules, renderer,
+input controller, and OIA. The terminal remains locked and blank until a
+source-validated PTF datastream fixture is supplied. No approximate PTF screen is
+shipped as a placeholder.
+
+See [`frontend/public/ironterm/SCENARIO_MODE.md`](frontend/public/ironterm/SCENARIO_MODE.md).
+PTF screen provenance, LCL comparisons, IBM sources, and fixture release gates are
+tracked in [`frontend/public/ironterm/fixtures/SCREEN_SOURCING.md`](frontend/public/ironterm/fixtures/SCREEN_SOURCING.md)
+and the machine-readable `screen-sources.json` registry.
 
 ## Counter-lever scoring (summary)
 
@@ -105,11 +125,11 @@ Static hosting: serve `frontend/dist` (sample JSON included). Live feeds need a 
 4. Optional: guided routing / shop persona (answers stay in-browser); paste PSP tokens if you have them.
 5. Copy change packet for a ticket-ready Markdown artifact.
 
-Story in one line: GRC language (CVSS / OWASP access-control) becomes systems work (bulletin → Apply dock → verify on box).
+Story in one line: GRC language (CVSS / OWASP access-control) becomes IBM i systems work (bulletin → PTF decision → 5250 verification → closure evidence).
 
 ## Portfolio card copy
 
-**IBM Power & Z Vulnerability Curator** — Curates public vulnerability intelligence for IBM Power (IBM i, AIX, Linux on Power) and IBM Z (z/OS) into Apply, Contain, or Monitor — with guided routing questions, PTF/APAR/Fix Central resolve paths, interim controls, optional browser-only shop context + paste, feed honesty, and ticket-ready change packets. Pages serves a scheduled live snapshot (no open API). Flagship walkthrough: CVE-2024-25050. Not a scanner of record.
+**IBM i Vulnerability Curator** — Curates public vulnerability intelligence for IBM i into Apply, Contain, or Monitor, then carries supported PTF findings into a synthetic 5250 verification rail built on IronTerm’s protocol-grounded terminal core. Includes guided shop context, bulletin/PTF/Fix Central paths, interim controls, feed honesty, and ticket-ready change packets. Pages serves a scheduled public snapshot with no open API or live host connection. Flagship walkthrough: CVE-2024-25050. Not a scanner of record.
 
 ## Static Pages deploy (scheduled live snapshot)
 
@@ -141,8 +161,15 @@ python -m app.scripts.refresh_live_snapshot
 
 IBM Plex + OLED black grounds. Green and amber stay on strokes and accents only — no green-washed panels. No glow, scanline grids, side-tab cards, hero kickers, or pulse dots — patterns the [impeccable](https://impeccable.style/slop) detector treats as AI slop. Substance lives in the pulls, docks, and Resolve / Interim steps.
 
+## License and attribution
+
+This repository is distributed under GPL-3.0 because it incorporates and modifies
+GPL-3.0 IronTerm source. The upstream license and pinned commit are preserved under
+`frontend/public/ironterm/`. Local modifications are documented in
+`SCENARIO_MODE.md`.
+
 ## Honesty
 
-Practice / portfolio demo. Public feeds only. External advisory text is sanitized and untrusted. PTF/APAR extraction is best-effort from public bulletins — always confirm on Fix Central and your release matrix before change.
+Practice / portfolio demo. Public feeds only. External advisory text is sanitized and untrusted. PTF/APAR extraction is best-effort from public bulletins. Terminal fixtures must be validated against IBM-controlled documentation or clean IBM i reference output before release. Always confirm on Fix Central and your release matrix before change.
 
 Pre-publish checklist: [`SHIP_SAFETY.md`](SHIP_SAFETY.md).

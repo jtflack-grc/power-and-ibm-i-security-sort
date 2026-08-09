@@ -38,11 +38,11 @@ export function AboutOverlay({ mode, onClose, onReplayIntro }: Props) {
         {isIntro ? (
           <>
             <p className="about-kicker">Before the queue</p>
-            <h1 id="about-title">IBM Power &amp; Z Vulnerability Curator</h1>
+            <h1 id="about-title">IBM i Vulnerability Curator</h1>
             <p className="welcome-lead">
-              This is a curator, not a scanner. It turns public CVE intel for IBM Power (IBM i,
-              AIX, Linux on Power) and IBM Z (z/OS) into a shared Apply / Contain / Monitor work
-              queue — with explainable counter-levers instead of CVSS-alone panic.
+              This is a curator, not a scanner. It turns public CVE intelligence for IBM i into an
+              Apply / Contain / Monitor queue with explainable counter-levers and an explicit path
+              from vendor remedy to system verification.
             </p>
             <ul className="welcome-method">
               <li>
@@ -54,8 +54,8 @@ export function AboutOverlay({ mode, onClose, onReplayIntro }: Props) {
                 uploaded
               </li>
               <li>
-                <strong>Work</strong> Open a finding for Resolve (bulletin / PTF / APAR) and Interim
-                controls, then copy a change packet if you want
+                <strong>Work</strong> Open a finding for Resolve (bulletin / PTF / APAR), Interim
+                controls, and source-validated 5250 verification when a scenario exists
               </li>
             </ul>
             <p className="welcome-honesty">
@@ -70,10 +70,11 @@ export function AboutOverlay({ mode, onClose, onReplayIntro }: Props) {
         ) : (
           <>
             <p className="about-kicker">Credits</p>
-            <h1 id="about-title">IBM Power &amp; Z Vulnerability Curator</h1>
+            <h1 id="about-title">IBM i Vulnerability Curator</h1>
             <p className="welcome-lead">
               Built by <strong>John Flack</strong> (jtflack-grc) as a portfolio artifact that
-              translates GRC / vuln-management language into IBM Power and IBM Z systems work.
+              translates GRC / vulnerability-management language into IBM i systems work and
+              verification evidence.
             </p>
             <ul className="welcome-method">
               <li>
@@ -81,12 +82,12 @@ export function AboutOverlay({ mode, onClose, onReplayIntro }: Props) {
                 NVD, EPSS, OWASP context, IBM bulletin hints → Apply / Contain / Monitor
               </li>
               <li>
-                <strong>Platform scope</strong> IBM Power = IBM i, AIX, Linux on Power; IBM Z =
-                z/OS
+                <strong>Platform scope</strong> IBM i only, including operating-system and
+                supply-chain findings with a defensible IBM i applicability signal
               </li>
               <li>
                 <strong>What it isn&apos;t</strong> A scanner of record, an authenticated enterprise
-                service, or a replacement for Fix Central / your change board
+                service, a live IBM i terminal, or a replacement for Fix Central / your change board
               </li>
               <li>
                 <strong>How Pages works</strong> Daily scheduled public intel snapshot, no open API,

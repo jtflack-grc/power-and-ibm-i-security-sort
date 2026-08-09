@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>IBM i verification terminal</title>
+    <link href="../fonts/fonts.css" rel="stylesheet" />
+    <link rel="stylesheet" href="./scenario.css" />
+  </head>
+  <body>
+    <main class="terminal-shell" aria-label="Synthetic IBM i 5250 verification terminal">
+      <div class="terminal-status">
+        <span>IRONTERM TN5250</span>
+        <span id="status">AWAITING VALIDATED FIXTURE</span>
+      </div>
+      <div class="terminal-stage">
+        <canvas id="screen" width="960" height="576" tabindex="0"></canvas>
+        <div id="fixture-empty" class="fixture-empty">
+          <strong>No PTF scenario loaded</strong>
+          <span>The terminal is intentionally blank until a source-validated 5250 fixture is available.</span>
+        </div>
+      </div>
+      <div class="oia" aria-label="Operator information area">
+        <span id="oia-conn" class="oia-cell"></span>
+        <span id="oia-sys" class="oia-cell">SCENARIO</span>
+        <span id="oia-lock" class="oia-cell"></span>
+        <span id="oia-insert" class="oia-cell"></span>
+        <span id="oia-alarm" class="oia-cell"></span>
+        <span id="oia-msg" class="oia-cell"></span>
+        <span class="oia-spacer"></span>
+        <span id="oia-model" class="oia-cell">IBM-5292-2</span>
+        <span id="oia-cursor" class="oia-cell">R 01 C 001</span>
+      </div>
+    </main>
+    <script type="module" src="./scenario-main.js"></script>
+  </body>
+</html>

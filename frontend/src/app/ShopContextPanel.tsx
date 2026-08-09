@@ -6,7 +6,6 @@ import {
   type Privilege,
   type ShopContext,
 } from "../shopContext";
-import type { Platform } from "../types";
 
 interface Props {
   context: ShopContext;
@@ -25,7 +24,7 @@ export function ShopContextPanel({ context, onChange, onStartIntake }: Props) {
         ? ` · ${context.paste.ptfs.length + context.paste.apars.length} paste tokens`
         : "";
     if (persona) return `${persona.label}${pasteBits}`;
-    return `${context.primaryPlatform} · ${context.exposure} · ${context.changePressure}${pasteBits}`;
+    return `IBM i · ${context.exposure} · ${context.changePressure}${pasteBits}`;
   }, [context]);
 
   return (
@@ -40,7 +39,7 @@ export function ShopContextPanel({ context, onChange, onStartIntake }: Props) {
         <div className="shop-body">
           <p className="shop-privacy">
             Answers stay in this browser tab (sessionStorage). Nothing is uploaded — no inventory
-            file, no keys.
+            file, credentials, or keys.
           </p>
 
           {onStartIntake && (
@@ -80,26 +79,6 @@ export function ShopContextPanel({ context, onChange, onStartIntake }: Props) {
           </div>
 
           <div className="shop-grid">
-            <label>
-              Platform focus
-              <select
-                value={context.primaryPlatform}
-                disabled={!context.enabled}
-                onChange={(e) =>
-                  onChange({
-                    ...context,
-                    primaryPlatform: e.target.value as Platform | "multi",
-                    personaId: undefined,
-                  })
-                }
-              >
-                <option value="ibm_i">IBM i</option>
-                <option value="aix">AIX</option>
-                <option value="linux_on_power">Linux on Power</option>
-                <option value="zos">z/OS</option>
-                <option value="multi">Multi / all</option>
-              </select>
-            </label>
             <label>
               Exposure
               <select

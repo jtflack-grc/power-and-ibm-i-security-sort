@@ -13,7 +13,7 @@ from app.models import Finding
 RiskSurface = Literal["platform", "supply_chain", "mixed"]
 ActionLane = Literal["apply", "contain", "monitor"]
 
-# Third-party / open-source stack that commonly rides on Power / IBM i / AIX / z
+# Third-party / open-source stack that commonly rides on IBM i.
 SUPPLY_CHAIN_PATTERNS = [
     r"\bapache\b",
     r"\btomcat\b",
@@ -55,17 +55,10 @@ PLATFORM_NATIVE_PATTERNS = [
     r"\bibm i\b",
     r"\bos/400\b",
     r"\bos400\b",
-    r"\baix\b",
-    r"\bz/os\b",
-    r"\bzos\b",
-    r"\bpowervm\b",
-    r"\bpowervm\b",
-    r"\bhmc\b",
-    r"\bfabric\b",
     r"\bdb2 for i\b",
-    r"\bdb2 for z\b",
     r"\bqsys\b",
-    r"\bicl\b",
+    r"\bqsys2\b",
+    r"\bpase\b",
 ]
 
 

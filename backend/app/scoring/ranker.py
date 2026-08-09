@@ -1,5 +1,5 @@
 """
-Multi-source counter-lever ranker for Power System Vulnerability Curator.
+Multi-source counter-lever ranker for IBM i Vulnerability Curator.
 
 Philosophy
 ----------
@@ -14,7 +14,7 @@ CVSS alone sorts by theoretical blast radius. That floods Urgents with
     - NVD CVSS severity / score
     - Network / adjacent attack vector from CVSS vector string
     - OWASP Top 10 CWE mapping (context, not automatic urgency)
-    - IBM Security Bulletin confirmation (vendor acknowledges Power/IBM i impact)
+    - IBM Security Bulletin confirmation (vendor acknowledges IBM i impact)
     - Strong CPE platform match
     - Recent publication / modification window
 
@@ -357,7 +357,7 @@ def apply_levers(finding: Finding, cfg: RankerConfig | None = None) -> Finding:
                     source="NVD CPE",
                     direction=LeverDirection.UP,
                     weight=cfg.cpe_match_boost,
-                    reason="Strong CPE match to a Power-family platform.",
+                    reason="Strong CPE match to IBM i.",
                     evidence={
                         "platforms": [p.platform.value for p in finding.platforms],
                     },

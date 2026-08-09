@@ -13,7 +13,7 @@ def test_kev_is_absolute_urgent():
         cvss_score=10.0,
         on_kev=True,
         epss=0.97,
-        platforms=[PlatformHit(platform=Platform.LINUX_ON_POWER, match_strength="keyword")],
+        platforms=[PlatformHit(platform=Platform.IBM_I, match_strength="keyword")],
     )
     apply_levers(f)
     assert f.bucket.value == "urgent"
@@ -30,7 +30,7 @@ def test_epss_tempers_high_cvss_without_kev():
         on_kev=False,
         epss=0.0005,
         published="2025-06-01T00:00:00.000",
-        platforms=[PlatformHit(platform=Platform.AIX, match_strength="cpe")],
+        platforms=[PlatformHit(platform=Platform.IBM_I, match_strength="cpe")],
     )
     apply_levers(f)
     assert any(l.id == "epss_vs_cvss_temper" for l in f.levers)
@@ -90,7 +90,7 @@ def test_ancient_temper_applies():
         epss=0.9,
         on_kev=False,
         ibm_bulletin_status="unconfirmed",
-        platforms=[PlatformHit(platform=Platform.AIX, match_strength="cpe")],
+        platforms=[PlatformHit(platform=Platform.IBM_I, match_strength="cpe")],
     )
     apply_levers(f)
     assert any(l.id == "ancient_unconfirmed_temper" for l in f.levers)
@@ -149,7 +149,7 @@ def test_ancient_kev_still_urgent():
         cvss_score=7.5,
         on_kev=True,
         ibm_bulletin_status="unconfirmed",
-        platforms=[PlatformHit(platform=Platform.LINUX_ON_POWER, match_strength="cpe")],
+        platforms=[PlatformHit(platform=Platform.IBM_I, match_strength="cpe")],
     )
     apply_levers(f)
     assert f.bucket.value == "urgent"

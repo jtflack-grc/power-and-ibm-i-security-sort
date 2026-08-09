@@ -1,5 +1,5 @@
 export type Bucket = "urgent" | "watch" | "low";
-export type Platform = "ibm_i" | "aix" | "linux_on_power" | "zos";
+export type Platform = "ibm_i";
 
 export interface Lever {
   id: string;
@@ -96,7 +96,4 @@ export interface ProgressEvent {
 
 export const PLATFORM_LABELS: Record<Platform, string> = {
   ibm_i: "IBM i",
-  aix: "AIX",
-  linux_on_power: "Linux on Power",
-  zos: "z/OS",
 };

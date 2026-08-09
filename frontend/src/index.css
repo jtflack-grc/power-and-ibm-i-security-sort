@@ -1,8 +1,8 @@
 /**
- * Visual system — Power Vuln Curator
+ * Visual system — IBM i Vulnerability Curator
  * OLED black grounds; green/amber reserved for strokes and accents.
  * Anti-slop: no scanline grid, side-tab cards, glow, pulse dots, or hero kickers.
- */
+*/
 :root {
   --ink: #000000;
   --panel: #070707;
@@ -1472,6 +1472,73 @@ a {
 
 .shop-grid select:disabled {
   opacity: 0.45;
+}
+
+.verification-rail {
+  margin-top: 1rem;
+  border: 1px solid var(--line);
+  background: #050706;
+}
+
+.verification-head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.8rem 0.9rem 0.7rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.verification-kicker,
+.verification-copy,
+.verification-source {
+  margin: 0;
+}
+
+.verification-kicker {
+  color: var(--muted);
+  font: 0.68rem "IBM Plex Mono", monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.verification-head h3 {
+  margin: 0.2rem 0 0;
+  font-size: 0.94rem;
+  font-weight: 500;
+}
+
+.verification-state {
+  border: 1px solid var(--amber);
+  color: var(--amber);
+  padding: 0.25rem 0.45rem;
+  font: 0.66rem "IBM Plex Mono", monospace;
+  white-space: nowrap;
+}
+
+.verification-copy {
+  padding: 0.7rem 0.9rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.verification-frame-wrap {
+  height: 280px;
+  margin: 0 0.9rem;
+}
+
+.verification-frame {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.verification-source {
+  padding: 0.55rem 0.9rem 0.7rem;
+  color: var(--muted);
+  font: 0.65rem/1.45 "IBM Plex Mono", monospace;
 }
 
 @media (max-width: 700px) {

@@ -27,24 +27,6 @@ PLATFORM_QUERIES_FULL: dict[Platform, dict[str, Any]] = {
             "OS/400",
         ],
     },
-    Platform.AIX: {
-        "label": "AIX",
-        "virtual_matches": ["cpe:2.3:o:ibm:aix"],
-        "keywords": ["IBM AIX Security Advisory", "AIX fileset"],
-    },
-    Platform.LINUX_ON_POWER: {
-        "label": "Linux on Power",
-        "virtual_matches": [
-            "cpe:2.3:a:ibm:powervm_hypervisor",
-            "cpe:2.3:a:ibm:power_system_firmware",
-        ],
-        "keywords": ["PowerVM", "ppc64le", "Linux on Power", "PowerSC"],
-    },
-    Platform.ZOS: {
-        "label": "z/OS",
-        "virtual_matches": ["cpe:2.3:o:ibm:z/os", "cpe:2.3:o:ibm:zos"],
-        "keywords": ["IBM z/OS", "z/OS Security Bulletin", "SMP/E"],
-    },
 }
 
 # Keyless demo recipe — ~8 queries, 1 page each (~1 min worst case vs several)
@@ -53,21 +35,6 @@ PLATFORM_QUERIES_SLIM: dict[Platform, dict[str, Any]] = {
         "label": "IBM i",
         "virtual_matches": ["cpe:2.3:o:ibm:i"],
         "keywords": ["IBM i Security Bulletin"],
-    },
-    Platform.AIX: {
-        "label": "AIX",
-        "virtual_matches": ["cpe:2.3:o:ibm:aix"],
-        "keywords": [],
-    },
-    Platform.LINUX_ON_POWER: {
-        "label": "Linux on Power",
-        "virtual_matches": ["cpe:2.3:a:ibm:powervm_hypervisor"],
-        "keywords": ["PowerVM"],
-    },
-    Platform.ZOS: {
-        "label": "z/OS",
-        "virtual_matches": ["cpe:2.3:o:ibm:z/os"],
-        "keywords": ["IBM z/OS"],
     },
 }
 
@@ -85,7 +52,7 @@ PLATFORM_QUERIES = PLATFORM_QUERIES_SLIM
 
 
 def _headers() -> dict[str, str]:
-    headers = {"User-Agent": "PowerSystemVulnerabilityCurator/1.0 (portfolio-demo)"}
+    headers = {"User-Agent": "IBMiVulnerabilityCurator/1.0 (portfolio-demo)"}
     api_key = os.getenv("NVD_API_KEY", "").strip()
     if api_key:
         headers["apiKey"] = api_key
@@ -148,16 +115,6 @@ def _cpe_mentions_platform(configurations: list[dict[str, Any]] | None, platform
     blob = str(configurations or []).lower()
     needles = {
         Platform.IBM_I: ["ibm:i", "ibm i", "os400", "os/400", "i_operating_system"],
-        Platform.AIX: ["ibm:aix", "aix"],
-        Platform.LINUX_ON_POWER: [
-            "ppc64",
-            "powerpc",
-            "powervm",
-            "linux on power",
-            "power_system_firmware",
-            "powersc",
-        ],
-        Platform.ZOS: ["z/os", "zos", "ibm:z", "z%2fos"],
     }
     return any(n in blob for n in needles[platform])
 
@@ -168,18 +125,6 @@ def _keyword_text_match(item: dict[str, Any], platform: Platform) -> bool:
     blob = f"{title} {desc} {cve.get('configurations') or ''}".lower()
     must = {
         Platform.IBM_I: ["ibm i", "os/400", "os400", "as/400", "ibm:i"],
-        Platform.AIX: ["aix"],
-        Platform.LINUX_ON_POWER: [
-            "powervm",
-            "ppc64",
-            "powerpc",
-            "linux on power",
-            "powersc",
-            "power system firmware",
-            "power9",
-            "power10",
-        ],
-        Platform.ZOS: ["z/os", "zos", "ibm z"],
     }
     if _cpe_mentions_platform(cve.get("configurations"), platform):
         return True
@@ -372,7 +317,7 @@ async def collect_platform_cves(
     on_progress: ProgressCb | None = None,
 ) -> dict[str, Finding]:
     """
-    Collect NVD CVEs for Power-family platforms.
+    Collect NVD CVEs with an IBM i operating-system or product signal.
 
     Keyless mode uses a slim CPE/keyword recipe and single-page pulls so cold
     demos finish in about a minute instead of several. Cache hits skip the

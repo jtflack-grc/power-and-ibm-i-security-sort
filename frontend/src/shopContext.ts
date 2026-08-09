@@ -2,7 +2,7 @@
  * Shop context — optional, session-only, never uploaded.
  * Answers live in sessionStorage and only re-weight the local result.
  */
-import type { Finding, Platform, TriageMetrics, TriageResult } from "./types";
+import type { Finding, TriageMetrics, TriageResult } from "./types";
 
 export type Exposure = "internet" | "internal" | "restricted";
 export type Privilege = "elevated" | "standard";
@@ -17,12 +17,11 @@ export interface PasteTokens {
 
 export interface ShopContext {
   enabled: boolean;
-  primaryPlatform: Platform | "multi";
   exposure: Exposure;
   privilege: Privilege;
   changePressure: ChangePressure;
   personaId?: string;
-  /** Optional paste (PSP / DSPPTF / instfix head). Session-only. */
+  /** Optional paste (PSP / DSPPTF excerpt). Session-only. */
   paste?: PasteTokens | null;
   /** True after guided routing finished this session */
   routed?: boolean;
@@ -37,7 +36,6 @@ export interface ShopPersona {
 
 export const DEFAULT_SHOP: ShopContext = {
   enabled: false,
-  primaryPlatform: "ibm_i",
   exposure: "internal",
   privilege: "standard",
   changePressure: "this_month",
@@ -48,7 +46,7 @@ export const DEFAULT_SHOP: ShopContext = {
 const PTF_RE = /\b(?:SI|MF|UJ|UI|SE)\d{4,7}\b/gi;
 const APAR_RE = /\b(?:APAR\s+)?([A-Z]{2}\d{5,7})\b/gi;
 
-/** Parse PSP / DSPPTF / instfix paste client-side. Never leaves the browser. */
+/** Parse PSP / DSPPTF paste client-side. Never leaves the browser. */
 export function parseShopPaste(raw: string): PasteTokens {
   const text = raw.trim();
   const ptfs = [...new Set((text.match(PTF_RE) ?? []).map((t) => t.toUpperCase()))];
@@ -80,41 +78,32 @@ export function findingMatchesPaste(f: Finding, paste?: PasteTokens | null): boo
   );
 }
 
-export function platformFilterFromShop(
-  primary: Platform | "multi"
-): Platform | "all" {
-  return primary === "multi" ? "all" : primary;
-}
-
 export const PERSONAS: ShopPersona[] = [
   {
     id: "ibm_i_edge",
     label: "IBM i · exposed services",
     blurb: "Prod LPAR, ODBC/SSH reachable from broader networks, privileged profiles in play.",
     context: {
-      primaryPlatform: "ibm_i",
       exposure: "internet",
       privilege: "elevated",
       changePressure: "this_week",
     },
   },
   {
-    id: "aix_internal",
-    label: "AIX · internal midrange",
-    blurb: "AIX estate on an internal VLAN; standard change calendar.",
+    id: "ibm_i_internal",
+    label: "IBM i · internal core",
+    blurb: "Production LPARs on restricted internal networks with a standard change calendar.",
     context: {
-      primaryPlatform: "aix",
       exposure: "internal",
       privilege: "standard",
       changePressure: "this_month",
     },
   },
   {
-    id: "watch_posture",
-    label: "Multi · monitor posture",
-    blurb: "Mixed Power estate; default to watching until a package path is clear.",
+    id: "ibm_i_restricted",
+    label: "IBM i · restricted posture",
+    blurb: "Segmented LPARs where non-KEV findings can wait for a confirmed package path.",
     context: {
-      primaryPlatform: "multi",
       exposure: "restricted",
       privilege: "standard",
       changePressure: "backlog",
@@ -152,11 +141,6 @@ function vectorMap(vector?: string | null): Record<string, string> {
   return out;
 }
 
-function platformMatch(f: Finding, primary: Platform | "multi"): boolean {
-  if (primary === "multi") return true;
-  return f.platforms.some((p) => p.platform === primary);
-}
-
 /**
  * Re-weights a triage result using shop answers. Pure client transform.
  * Does not call any network API.
@@ -177,28 +161,6 @@ export function applyShopContext(result: TriageResult, ctx: ShopContext): Triage
     const shopLevers: Finding["levers"] = [];
     let delta = 0;
     const metrics = vectorMap(f.cvss_vector);
-
-    if (platformMatch(f, ctx.primaryPlatform) && ctx.primaryPlatform !== "multi") {
-      const w = 14;
-      delta += w;
-      shopLevers.push({
-        id: "shop_platform",
-        source: "Shop context",
-        direction: "up",
-        weight: w,
-        reason: `Matches this shop’s primary platform (${ctx.primaryPlatform})`,
-      });
-    } else if (ctx.primaryPlatform !== "multi" && !platformMatch(f, ctx.primaryPlatform)) {
-      const w = -10;
-      delta += w;
-      shopLevers.push({
-        id: "shop_platform_out",
-        source: "Shop context",
-        direction: "down",
-        weight: w,
-        reason: "Outside this shop’s primary platform — temper relative priority",
-      });
-    }
 
     if (ctx.exposure === "internet" && metrics.AV === "N") {
       const w = 16;
@@ -367,7 +329,7 @@ export function changePacketMarkdown(f: Finding, ctx?: ShopContext | null): stri
     lines.push(
       "",
       "## Shop context (browser session only — not uploaded)",
-      `- Platform focus: ${ctx.primaryPlatform}`,
+      "- Platform focus: IBM i",
       `- Exposure: ${ctx.exposure}`,
       `- Privilege: ${ctx.privilege}`,
       `- Change pressure: ${ctx.changePressure}`
@@ -376,7 +338,7 @@ export function changePacketMarkdown(f: Finding, ctx?: ShopContext | null): stri
   lines.push(
     "",
     "---",
-    "_Generated by Power System Vulnerability Curator. Confirm PTF/APAR ids on Fix Central before change._"
+    "_Generated by IBM i Vulnerability Curator. Confirm PTF/APAR ids on Fix Central before change._"
   );
   return lines.join("\n");
 }

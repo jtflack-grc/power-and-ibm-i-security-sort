@@ -1,4 +1,4 @@
-# Ship safety trainer — IBM Power & Z Vulnerability Curator
+# Ship safety trainer — IBM i Vulnerability Curator
 
 Run this before push / portfolio link. Public surface is **GitHub Pages with a scheduled live snapshot** (static JSON). FastAPI on-demand live feeds are for local/Docker demos only.
 
@@ -28,7 +28,8 @@ Optional Actions secret `NVD_API_KEY` is fine for scheduled snapshot quality —
 ## 2. What *is* safe to publish
 
 - Source under `backend/app/`, `frontend/src/`, tests, README, Dockerfile, `.github/workflows/pages.yml`
-- `frontend/public/sample-triage.json` — curated **public** CVEs only
+- `frontend/public/sample-triage.json` — curated **public IBM i** CVEs only
+- `frontend/public/ironterm/` — pinned GPL-3.0 IronTerm source, license, attribution, and scenario adapter
 - Pages artifact may include generated `live-triage.json` (public CVE intel only)
 - Portfolio links to `jtflack-grc.github.io` (intentional public identity)
 
@@ -43,6 +44,10 @@ Optional Actions secret `NVD_API_KEY` is fine for scheduled snapshot quality —
 | CORS | Hardened | Localhost origins only; `credentials=False` |
 | CSRF / unauth triage | Acceptable for demo | `/api/triage/run` is open — **do not** expose API to the open internet without limits |
 | Docker `0.0.0.0` | Documented | Container LAN bind; public path is Pages static snapshot |
+| 5250 terminal | Transport-free | No host field, credentials, websockify, or live TCP/WebSocket target in the Pages UI |
+| Terminal messaging | Hardened | Exact parent/iframe source + origin checks; named fixture allowlist; no caller-supplied datastreams; bounded local records |
+| Browser capabilities | Hardened | CSP blocks objects, forms, and terminal network connections; clipboard reads disabled; public debug surface removed |
+| PTF fixtures | Source-gated | Do not ship a screen until its layout, labels, fields, statuses, and AID flow are validated |
 | Dependency noise | Acceptable | Pin via lockfiles; no weird private packages |
 
 ## 4. Pre-push commands
@@ -68,7 +73,7 @@ npm run build
 
 ## 6. Portfolio copy reminder
 
-Footer/README claim: practice demo, public feeds, not a scanner of record. Keep that honesty. Platform taxonomy should remain explicit: **IBM Power = IBM i / AIX / Linux on Power; IBM Z = z/OS.**
+Footer/README claim: practice demo, public feeds, IBM i only, not a scanner or live terminal of record. Keep that boundary explicit.
 
 ## Sign-off
 
@@ -76,4 +81,7 @@ Footer/README claim: practice demo, public feeds, not a scanner of record. Keep 
 - [ ] Caches / venv / `node_modules` / `dist` / `live-triage.json` not staged
 - [ ] `pytest` green
 - [ ] Pages workflow uses `vite --base=./`; optional `NVD_API_KEY` is Actions secret only
+- [ ] IronTerm `LICENSE`, `UPSTREAM_COMMIT`, and `SCENARIO_MODE.md` ship in the Pages artifact
+- [ ] `npm audit` reports no known runtime vulnerabilities; CSP and terminal message-boundary tests pass
+- [ ] Every enabled terminal fixture has a recorded IBM source and John’s IBM i acceptance review
 - [ ] Ready for push + portfolio card

@@ -72,7 +72,7 @@ async def enrich_ibm_bulletins(
     )
 
     headers = {
-        "User-Agent": "PowerSystemVulnerabilityCurator/1.0 (portfolio-demo)",
+        "User-Agent": "IBMiVulnerabilityCurator/1.0 (portfolio-demo)",
         "Accept": "text/html,application/xhtml+xml",
     }
 
