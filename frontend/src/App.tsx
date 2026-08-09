@@ -412,7 +412,11 @@ export default function App() {
         onClearError={() => setError(null)}
       />
       {showIntro && (
-        <AboutOverlay mode="intro" onClose={() => setShowIntro(false)} />
+        <AboutOverlay
+          mode="intro"
+          onClose={() => setShowIntro(false)}
+          onStartIntake={startIntake}
+        />
       )}
       {showCredits && (
         <AboutOverlay

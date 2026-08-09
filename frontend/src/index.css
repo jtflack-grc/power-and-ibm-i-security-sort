@@ -1019,6 +1019,113 @@ a {
   max-width: 640px;
 }
 
+.welcome-card.about-intro {
+  width: min(920px, 100%);
+  max-width: 920px;
+  max-height: calc(100vh - 2.5rem);
+  overflow-y: auto;
+  padding: clamp(1.5rem, 3vw, 2.35rem);
+}
+
+.about-intro h1 {
+  max-width: 22ch;
+  font-size: clamp(1.65rem, 3.2vw, 2.45rem);
+  line-height: 1.08;
+  margin-bottom: 0.8rem;
+}
+
+.about-intro .welcome-lead {
+  max-width: 76ch;
+  font-size: 1.05rem;
+  line-height: 1.55;
+}
+
+.welcome-source-line {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.2rem 0.75rem;
+  align-items: baseline;
+  margin: 1.1rem 0;
+  padding: 0.8rem 0.9rem;
+  border-left: 3px solid var(--green);
+  background: color-mix(in srgb, var(--panel) 88%, var(--green) 12%);
+}
+
+.welcome-source-line strong,
+.welcome-first-pass > strong {
+  color: var(--green);
+  font: 0.72rem "IBM Plex Mono", monospace;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.welcome-source-line span {
+  color: var(--white);
+  font-weight: 600;
+}
+
+.welcome-source-line small {
+  grid-column: 2;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.welcome-rail-map {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border: 1px solid var(--line);
+  margin: 1rem 0;
+}
+
+.welcome-rail-map section {
+  min-width: 0;
+  padding: 1rem;
+  border-right: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.012);
+}
+
+.welcome-rail-map section:last-child {
+  border-right: 0;
+}
+
+.welcome-rail-number {
+  color: var(--green);
+  font: 0.68rem "IBM Plex Mono", monospace;
+  letter-spacing: 0.08em;
+}
+
+.welcome-rail-map h2 {
+  margin: 0.35rem 0 0.45rem;
+  color: var(--white);
+  font-size: 0.98rem;
+  font-weight: 600;
+}
+
+.welcome-rail-map p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.83rem;
+  line-height: 1.45;
+}
+
+.welcome-first-pass {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.75rem;
+  align-items: start;
+  margin: 1rem 0;
+}
+
+.welcome-first-pass ol {
+  margin: 0;
+  padding-left: 1.2rem;
+  color: var(--muted);
+  display: grid;
+  gap: 0.25rem;
+  font-size: 0.88rem;
+  line-height: 1.4;
+}
+
 .about-kicker {
   margin: 0 0 0.35rem;
   font-family: "IBM Plex Mono", monospace;
@@ -1098,6 +1205,40 @@ a {
   font-size: 0.84rem !important;
   border-top: 1px solid var(--line);
   padding-top: 0.75rem;
+}
+
+@media (max-width: 700px) {
+  .overlay {
+    place-items: start center;
+    padding: 0.75rem;
+  }
+
+  .welcome-card.about-intro {
+    max-height: calc(100vh - 1.5rem);
+    padding: 1.2rem;
+  }
+
+  .welcome-rail-map {
+    grid-template-columns: 1fr;
+  }
+
+  .welcome-rail-map section {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .welcome-rail-map section:last-child {
+    border-bottom: 0;
+  }
+
+  .welcome-source-line,
+  .welcome-first-pass {
+    grid-template-columns: 1fr;
+  }
+
+  .welcome-source-line small {
+    grid-column: 1;
+  }
 }
 
 .live-banner {

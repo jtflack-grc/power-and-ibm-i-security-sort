@@ -1,4 +1,4 @@
-const INTRO_SEEN_KEY = "psvc-intro-seen-v1";
+const INTRO_SEEN_KEY = "psvc-intro-seen-v2";
 
 export function hasSeenIntro(): boolean {
   try {
@@ -22,14 +22,21 @@ interface Props {
   mode: Mode;
   onClose: () => void;
   onReplayIntro?: () => void;
+  onStartIntake?: () => void;
 }
 
-export function AboutOverlay({ mode, onClose, onReplayIntro }: Props) {
+export function AboutOverlay({ mode, onClose, onReplayIntro, onStartIntake }: Props) {
   const isIntro = mode === "intro";
 
   const enter = () => {
     markIntroSeen();
     onClose();
+  };
+
+  const route = () => {
+    markIntroSeen();
+    onClose();
+    onStartIntake?.();
   };
 
   return (
@@ -38,33 +45,58 @@ export function AboutOverlay({ mode, onClose, onReplayIntro }: Props) {
         {isIntro ? (
           <>
             <p className="about-kicker">Before the queue</p>
-            <h1 id="about-title">IBM i Vulnerability Curator</h1>
+            <h1 id="about-title">Turn IBM i security bulletins into system work</h1>
             <p className="welcome-lead">
-              This is a curator, not a scanner. It turns public CVE intelligence for IBM i into an
-              Apply / Contain / Monitor queue with explainable counter-levers and an explicit path
-              from vendor remedy to system verification.
+              IBM publishes the affected product and remedy. This curator organizes those current
+              IBM i bulletins into an explainable <strong>Apply / Contain / Monitor</strong> queue,
+              then carries the operator from risk signal to PTF or APAR evidence and verification.
             </p>
-            <ul className="welcome-method">
-              <li>
-                <strong>Feeds</strong> A scheduled public snapshot loads next (focused modern rail —
-                museum CVEs stay out unless you ask)
-              </li>
-              <li>
-                <strong>Route</strong> Optional shop answers re-weight this tab only; nothing is
-                uploaded
-              </li>
-              <li>
-                <strong>Work</strong> Open a finding for Resolve (bulletin / PTF / APAR), Interim
-                controls, and source-validated 5250 verification when a scenario exists
-              </li>
-            </ul>
+
+            <div className="welcome-source-line">
+              <strong>Discovery authority</strong>
+              <span>IBM Product Security Central / PSIRT</span>
+              <small>NVD, CISA KEV, EPSS, CVSS, and OWASP add context; they do not define the queue.</small>
+            </div>
+
+            <div className="welcome-rail-map" aria-label="The three application rails">
+              <section>
+                <span className="welcome-rail-number">01</span>
+                <h2>Findings</h2>
+                <p>Start with IBM&apos;s newest published issues. Filters and shop context help narrow the queue.</p>
+              </section>
+              <section>
+                <span className="welcome-rail-number">02</span>
+                <h2>Issue workbench</h2>
+                <p>See why the issue ranks, what IBM says to apply, and what to contain while change work proceeds.</p>
+              </section>
+              <section>
+                <span className="welcome-rail-number">03</span>
+                <h2>LCL evidence check</h2>
+                <p>Use command coaching and source-validated 5250 screens to verify resolved PTF evidence.</p>
+              </section>
+            </div>
+
+            <div className="welcome-first-pass">
+              <strong>Your first pass</strong>
+              <ol>
+                <li>Select a recent finding in the left rail.</li>
+                <li>Review its ranking levers and IBM remediation path.</li>
+                <li>Use the evidence rail when a validated PTF scenario is available.</li>
+              </ol>
+            </div>
             <p className="welcome-honesty">
-              Portfolio demo by John Flack · i on GRC. Public feeds only. Not a scanner of record.
+              This is a decision and evidence companion, not a scanner of record, Fix Central,
+              or a live connection to an IBM i partition. Optional shop answers stay in this tab.
             </p>
             <div className="welcome-actions">
               <button type="button" className="button button-primary" onClick={enter}>
-                Enter the queue
+                Enter current queue
               </button>
+              {onStartIntake && (
+                <button type="button" className="button" onClick={route}>
+                  Route for my shop first
+                </button>
+              )}
             </div>
           </>
         ) : (
