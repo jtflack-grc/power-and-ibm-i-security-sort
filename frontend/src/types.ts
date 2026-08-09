@@ -16,6 +16,37 @@ export interface PlatformHit {
   products: string[];
 }
 
+export interface BulletinApplicability {
+  applicability_id: string;
+  product_id?: string | null;
+  product_name: string;
+  component_type:
+    | "operating_system"
+    | "licensed_internal_code"
+    | "licensed_program"
+    | "bundled_component"
+    | "unknown";
+  release?: string | null;
+  release_system?: string | null;
+  individual_ptfs: string[];
+  group_ptfs: string[];
+  apars: string[];
+  source_excerpt: string;
+  source_url: string;
+  confidence: "structured" | "heuristic" | "unresolved";
+}
+
+export interface Bulletin {
+  bulletin_id: string;
+  url: string;
+  title: string;
+  published?: string | null;
+  last_modified?: string | null;
+  cve_ids: string[];
+  applicability: BulletinApplicability[];
+  affected_source_text: string;
+}
+
 export interface Finding {
   cve_id: string;
   title: string;
@@ -35,6 +66,7 @@ export interface Finding {
   ibm_bulletin_url?: string | null;
   ibm_bulletin_title?: string | null;
   ibm_bulletin_status: "confirmed" | "unconfirmed" | "not_checked";
+  bulletin_id?: string | null;
   owasp_top10: string[];
   nvd_url: string;
   score: number;
@@ -76,9 +108,11 @@ export interface FeedHealth {
 }
 
 export interface TriageResult {
+  schema_version?: string;
   job_id: string;
   generated_at: string;
   findings: Finding[];
+  bulletins?: Bulletin[];
   metrics: TriageMetrics;
   sources: string[];
   mode?: "sample" | "live";

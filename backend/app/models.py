@@ -38,6 +38,42 @@ class PlatformHit(BaseModel):
     products: list[str] = Field(default_factory=list)
 
 
+class BulletinApplicability(BaseModel):
+    """One source-supported product/release row from an IBM bulletin."""
+
+    applicability_id: str
+    product_id: str | None = None
+    product_name: str
+    component_type: Literal[
+        "operating_system",
+        "licensed_internal_code",
+        "licensed_program",
+        "bundled_component",
+        "unknown",
+    ] = "unknown"
+    release: str | None = None
+    release_system: str | None = None
+    individual_ptfs: list[str] = Field(default_factory=list)
+    group_ptfs: list[str] = Field(default_factory=list)
+    apars: list[str] = Field(default_factory=list)
+    source_excerpt: str = ""
+    source_url: str = ""
+    confidence: Literal["structured", "heuristic", "unresolved"] = "unresolved"
+
+
+class Bulletin(BaseModel):
+    """IBM Security Bulletin as the remediation-work unit."""
+
+    bulletin_id: str
+    url: str
+    title: str
+    published: str | None = None
+    last_modified: str | None = None
+    cve_ids: list[str] = Field(default_factory=list)
+    applicability: list[BulletinApplicability] = Field(default_factory=list)
+    affected_source_text: str = ""
+
+
 class Finding(BaseModel):
     cve_id: str
     title: str
@@ -58,6 +94,7 @@ class Finding(BaseModel):
     ibm_bulletin_url: str | None = None
     ibm_bulletin_title: str | None = None
     ibm_bulletin_status: Literal["confirmed", "unconfirmed", "not_checked"] = "not_checked"
+    bulletin_id: str | None = None
     owasp_top10: list[str] = Field(default_factory=list)
     nvd_url: str = ""
     score: float = 0.0
@@ -83,9 +120,11 @@ class TriageMetrics(BaseModel):
 
 
 class TriageResult(BaseModel):
+    schema_version: str = "2.0"
     job_id: str
     generated_at: str
     findings: list[Finding]
+    bulletins: list[Bulletin] = Field(default_factory=list)
     metrics: TriageMetrics
     sources: list[str]
     mode: Literal["sample", "live"] = "live"

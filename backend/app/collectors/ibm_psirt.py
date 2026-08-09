@@ -2,21 +2,31 @@ from __future__ import annotations
 
 import json
 import re
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from html.parser import HTMLParser
 from typing import Any
 from urllib.parse import urlparse
 
 import httpx
+from bs4 import BeautifulSoup
 
 from app.collectors.cache import DiskCache
-from app.models import Finding, Platform, PlatformHit
+from app.models import Bulletin, BulletinApplicability, Finding, Platform, PlatformHit
 
 PSIRT_SEARCH_API = "https://www.ibm.com/support/pages/securityapp/api/search"
 _CVE_RE = re.compile(r"\bCVE-\d{4}-\d{4,}\b", re.IGNORECASE)
 _MAX_RESPONSE_BYTES = 32 * 1024 * 1024
 _MAX_RESULTS = 1000
 _MAX_CVES = 750
+_RELEASE_RE = re.compile(r"\b(?:7\.([2-6])|V7R([2-6])M\d)\b", re.IGNORECASE)
+_PRODUCT_ID_RE = re.compile(r"\b(\d{4})-?([A-Z0-9]{3})\b", re.IGNORECASE)
+
+
+@dataclass
+class PsirtBundle:
+    findings: dict[str, Finding]
+    bulletins: list[Bulletin]
 
 
 class _TextExtractor(HTMLParser):
@@ -62,6 +72,94 @@ def _date(value: Any) -> str | None:
     return match.group(0) if match else None
 
 
+def _bulletin_id(url: str) -> str:
+    node = url.rstrip("/").rsplit("/", 1)[-1]
+    safe = re.sub(r"[^a-z0-9-]+", "-", node.lower()).strip("-") or "unknown"
+    return f"ibm-psirt-{safe}"
+
+
+def _release_values(text: str) -> list[tuple[str, str]]:
+    releases: list[tuple[str, str]] = []
+    for match in _RELEASE_RE.finditer(text):
+        minor = match.group(1) or match.group(2)
+        value = (f"7.{minor}", f"V7R{minor}M0")
+        if value not in releases:
+            releases.append(value)
+    return releases
+
+
+def _product_id(text: str) -> str | None:
+    match = _PRODUCT_ID_RE.search(text)
+    return f"{match.group(1)}{match.group(2)}".upper() if match else None
+
+
+def _component_type(product_id: str | None, text: str) -> str:
+    low = text.lower()
+    if product_id == "5770999" or "licensed internal code" in low or re.search(r"\blic\b", low):
+        return "licensed_internal_code"
+    if product_id == "5770SS1":
+        return "operating_system"
+    if product_id:
+        return "licensed_program"
+    if re.search(r"\bibm\s+i\b", low):
+        return "operating_system"
+    if any(token in low for token in ("java", "openssl", "bind", "liberty")):
+        return "bundled_component"
+    return "unknown"
+
+
+def _applicability_rows(
+    affected_html: Any, *, product: str, url: str, bulletin_id: str
+) -> list[BulletinApplicability]:
+    """Normalize releases conservatively without associating remedy tokens yet."""
+    raw = str(affected_html or "")
+    soup = BeautifulSoup(raw, "lxml")
+    table_rows = [
+        _plain(" ".join(cell.get_text(" ", strip=True) for cell in row.find_all("td")), 1000)
+        for row in soup.find_all("tr")
+        if row.find_all("td")
+    ]
+    candidates = [row for row in table_rows if row] or [_plain(raw, 3000)]
+    rows: list[BulletinApplicability] = []
+    seen: set[tuple[str | None, str | None, str]] = set()
+    for source in candidates:
+        if not source:
+            continue
+        product_id = _product_id(source) or _product_id(product)
+        releases: list[tuple[str | None, str | None]] = list(_release_values(source))
+        if not releases:
+            releases = [(None, None)]
+        for release, release_system in releases:
+            key = (product_id, release, source)
+            if key in seen:
+                continue
+            seen.add(key)
+            rows.append(
+                BulletinApplicability(
+                    applicability_id=f"{bulletin_id}-a{len(rows) + 1}",
+                    product_id=product_id,
+                    product_name=product or "IBM i",
+                    component_type=_component_type(product_id, f"{product} {source}"),
+                    release=release,
+                    release_system=release_system,
+                    source_excerpt=source,
+                    source_url=url,
+                    confidence="structured" if table_rows else "heuristic",
+                )
+            )
+    if rows:
+        return rows
+    return [
+        BulletinApplicability(
+            applicability_id=f"{bulletin_id}-a1",
+            product_name=product or "IBM i",
+            component_type=_component_type(_product_id(product), product),
+            source_url=url,
+            confidence="unresolved",
+        )
+    ]
+
+
 def _ibmi_record(record: dict[str, Any]) -> bool:
     product = _plain(record.get("field_product"), 500)
     affected = _plain(record.get("field_affected_products"), 4000)
@@ -78,11 +176,12 @@ def _records(payload: Any) -> list[dict[str, Any]]:
     return [row for row in rows[:_MAX_RESULTS] if isinstance(row, dict)]
 
 
-def parse_psirt_payload(
+def parse_psirt_bundle(
     payload: Any, *, published_after: str | None = None
-) -> dict[str, Finding]:
-    """Expand IBM bulletin search records into one authoritative row per CVE."""
+) -> PsirtBundle:
+    """Preserve bulletin records while expanding one authoritative finding per CVE."""
     findings: dict[str, Finding] = {}
+    bulletins: dict[str, Bulletin] = {}
     for record in _records(payload):
         if not _ibmi_record(record):
             continue
@@ -98,11 +197,35 @@ def parse_psirt_payload(
         url = _support_url(record.get("field_published_url"))
         if not url:
             continue
+        bulletin_id = _bulletin_id(url)
         published = _date(record.get("field_pub_date") or record.get("field_created"))
         if published_after and (not published or published < published_after):
             continue
         searchable = " ".join(str(v or "") for v in record.values())
         cves = list(dict.fromkeys(c.upper() for c in _CVE_RE.findall(searchable)))
+        applicability = _applicability_rows(
+            record.get("field_affected_products"),
+            product=product,
+            url=url,
+            bulletin_id=bulletin_id,
+        )
+        bulletin = bulletins.get(bulletin_id)
+        if bulletin is None:
+            bulletin = Bulletin(
+                bulletin_id=bulletin_id,
+                url=url,
+                title=title,
+                published=published,
+                last_modified=_date(
+                    record.get("field_modified_date") or record.get("field_updated")
+                ),
+                cve_ids=list(cves),
+                applicability=applicability,
+                affected_source_text=affected,
+            )
+            bulletins[bulletin_id] = bulletin
+        else:
+            bulletin.cve_ids = list(dict.fromkeys([*bulletin.cve_ids, *cves]))
         for cve_id in cves:
             if len(findings) >= _MAX_CVES and cve_id not in findings:
                 break
@@ -126,12 +249,20 @@ def parse_psirt_payload(
                 ibm_bulletin_url=url,
                 ibm_bulletin_title=title,
                 ibm_bulletin_status="confirmed",
+                bulletin_id=bulletin_id,
                 nvd_url=f"https://www.cve.org/CVERecord?id={cve_id}",
             )
             existing = findings.get(cve_id)
             if existing is None or (finding.published or "") > (existing.published or ""):
                 findings[cve_id] = finding
-    return findings
+    return PsirtBundle(findings=findings, bulletins=list(bulletins.values()))
+
+
+def parse_psirt_payload(
+    payload: Any, *, published_after: str | None = None
+) -> dict[str, Finding]:
+    """Compatibility wrapper returning the authoritative CVE index."""
+    return parse_psirt_bundle(payload, published_after=published_after).findings
 
 
 async def collect_ibmi_psirt(
@@ -171,6 +302,21 @@ async def collect_ibmi_psirt(
         raise ValueError("IBM PSIRT search returned an unexpected response shape")
     cache.set(cache_key, payload)
     return parse_psirt_payload(payload, published_after=cutoff)
+
+
+async def collect_ibmi_psirt_bundle(
+    client: httpx.AsyncClient, cache: DiskCache, *, days_back: int = 400
+) -> PsirtBundle:
+    """Collect the same bounded PSIRT feed while retaining bulletin structure."""
+    cache_key = "ibm_psirt:ibm-i:v1"
+    cached = cache.get(cache_key)
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=max(1, days_back))).date().isoformat()
+    if cached is None:
+        await collect_ibmi_psirt(client, cache, days_back=days_back)
+        cached = cache.get(cache_key)
+    if cached is None:
+        return PsirtBundle(findings={}, bulletins=[])
+    return parse_psirt_bundle(cached, published_after=cutoff)
 
 
 def enrich_psirt_from_nvd(

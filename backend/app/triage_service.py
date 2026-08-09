@@ -13,7 +13,7 @@ import httpx
 from app.collectors.cache import DiskCache
 from app.collectors.epss import fetch_epss_for_cves
 from app.collectors.ibm_bulletins import enrich_ibm_bulletins
-from app.collectors.ibm_psirt import collect_ibmi_psirt, enrich_psirt_from_nvd
+from app.collectors.ibm_psirt import collect_ibmi_psirt_bundle, enrich_psirt_from_nvd
 from app.collectors.kev import fetch_kev_index, ransomware_flag
 from app.collectors.nvd import collect_platform_cves, count_nvd_queries, has_nvd_api_key
 from app.models import ProgressEvent, TriageResult
@@ -215,9 +215,12 @@ async def build_live_result(
     async with httpx.AsyncClient() as client:
         await progress_checked("ibm", "Discovering IBM i bulletins from IBM PSIRT…", 5)
         psirt_findings: dict[str, Any] = {}
+        bulletins: list[Any] = []
         psirt_ok = False
         try:
-            psirt_findings = await collect_ibmi_psirt(client, cache)
+            psirt_bundle = await collect_ibmi_psirt_bundle(client, cache)
+            psirt_findings = psirt_bundle.findings
+            bulletins = psirt_bundle.bulletins
             psirt_ok = bool(psirt_findings)
             feed_health.append(
                 {
@@ -479,6 +482,7 @@ async def build_live_result(
             job_id=job_id,
             generated_at=datetime.now(timezone.utc).isoformat(),
             findings=ranked,
+            bulletins=bulletins,
             metrics=metrics,
             mode="live",
             feed_health=feed_health,
