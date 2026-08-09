@@ -2,7 +2,7 @@ import type { Finding } from "./types";
 
 // Individual IBM i PTF identifiers accepted by DSPPTF. SF identifiers are PTF
 // groups and intentionally stay out of the individual-PTF terminal scenario.
-const INDIVIDUAL_PTF_RE = /\b(?:SI|SJ|MF|UJ|UI|SE|UA|UB|UC)\d{4,7}\b/gi;
+const INDIVIDUAL_PTF_RE = /\b(?:SI|SJ|MF|MJ|UJ|UI|SE|UA|UB|UC)\d{4,7}\b/gi;
 const TRUSTED_FIX_KINDS = new Set(["ptf", "summary", "snippet", "bulletin"]);
 
 export interface PtfEvidence {

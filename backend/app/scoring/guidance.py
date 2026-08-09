@@ -24,7 +24,7 @@ from app.models import Finding, Platform
 
 # IBM i PTF/APAR identifiers — best-effort extraction from public IBM bulletins.
 PTF_TOKEN_RE = re.compile(
-    r"\b(?:SI|SJ|MF|UJ|UI|SE|UA|UB|UC)\d{4,7}\b",
+    r"\b(?:SI|SJ|MF|MJ|UJ|UI|SE|UA|UB|UC)\d{4,7}\b",
     re.IGNORECASE,
 )
 GROUP_PTF_TOKEN_RE = re.compile(r"\bSF\d{5}\b", re.IGNORECASE)

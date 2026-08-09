@@ -45,9 +45,10 @@ def test_nvd_bulletin_prefers_node_over_seo_slug():
 
 
 def test_ptf_apar_token_parse():
-    blob = "Apply PTF SI71234 or modern PTF SJ03022 and group SF99740; APAR IJ45678; also IV11222."
+    blob = "Apply PTF SI71234, modern PTF SJ03022, or LIC PTF MJ09365 and group SF99740; APAR IJ45678; also IV11222."
     assert "SI71234" in {t.upper() for t in PTF_TOKEN_RE.findall(blob)}
     assert "SJ03022" in {t.upper() for t in PTF_TOKEN_RE.findall(blob)}
+    assert "MJ09365" in {t.upper() for t in PTF_TOKEN_RE.findall(blob)}
     assert "SF99740" in {t.upper() for t in GROUP_PTF_TOKEN_RE.findall(blob)}
     apars = [(m.group(1) or m.group(0)).upper() for m in APAR_RE.finditer(blob)]
     assert "IJ45678" in apars
