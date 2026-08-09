@@ -29,15 +29,27 @@ Front door: [jtflack-grc.github.io/portfolio](https://jtflack-grc.github.io/port
 3. Distinguishes IBM i-native from supply-chain / TPRM surface
 4. Builds Resolve + Interim cards (including Fix Central / support search when scrape is thin)
 5. Groups remediation work by IBM bulletin while retaining individual CVE scoring
-6. UI: **Findings · Issue · Actions + 5250 verification**
+6. Compares IBM's expected PTF/group remedy with a bounded, browser-local inventory export
+7. Produces a Markdown evidence packet with optional owner, dates, disposition, reviewer, and observed-inventory status
+8. UI: **Findings · Issue · Actions + 5250 verification**
+
+## Why PSIRT-first changed the result
+
+The earlier NVD-discovery prototype found only 20 current IBM i-looking CVEs. That
+was not a defensible IBM i inventory: component vulnerabilities may be published
+under OpenSSL, Java, Liberty, BIND, ACS, and other names without an IBM i CPE or
+keyword. IBM PSIRT is now the admission authority, matching the source used by
+IBM's `SYSTOOLS.CVE_INFO` service. The current guarded snapshot contains 161
+PSIRT-confirmed CVEs across 49 processed bulletin bodies. NVD can enrich those
+records, but it cannot add findings to the published queue.
 
 ## Panels
 
 | Panel | Purpose |
 |-------|---------|
-| Findings | Bulletin-first queue with expandable CVEs, release/remedy filters, and recent/new views |
-| Issue | Overview + **Resolve** / **Interim** deep dive |
-| Actions | Work docks plus a transport-free IronTerm TN5250 verification rail |
+| Findings | Bulletin-first queue with expandable CVEs; release, product, remedy, priority, action, and snapshot-change filters |
+| Issue | **Resolve** / **Interim**, local decision fields, and downloadable Markdown packet |
+| Actions | Transport-free IronTerm verification plus local PTF/group inventory comparison |
 
 ## 5250 scenario mode
 
@@ -66,6 +78,7 @@ KEV escalates hard. EPSS can raise *or* temper high CVSS. OWASP is context, not 
 - **Published feeds are the Pages default.** A daily GitHub Action uses IBM PSIRT as the discovery authority, enriches those findings from public CISA / NVD / FIRST data, and ships `live-triage.json` inside the static site. No open triage API. No keys in the SPA.
 - **Sample remains an explicit offline walkthrough.** It never automatically replaces a healthy PSIRT snapshot.
 - **Shop context stays in the browser** (`sessionStorage`). Personas and answers never POST to a server.
+- **Inventory comparison stays in the browser.** CSV/text is limited to 200 KB / 5,000 lines, reduced to validated PTF/group identifiers and statuses, and never uploaded.
 - **On-demand live feeds are local/Docker only** (FastAPI). They call the same public sources. Optional `NVD_API_KEY` may be set as a **repo Actions secret** for fuller scheduled NVD pulls, or in the local shell — never embedded in a public deploy.
 - **Keyless NVD uses a slim recipe** (~8 queries, 1 page) so cold refreshes finish far faster; disk cache skips politeness delays on repeat. Successful local live runs persist a **last-good snapshot** served instantly on the next Live click while a refresh continues in the background.
 - **Change packets** are generated client-side (copy / download Markdown).
@@ -124,13 +137,14 @@ Static hosting: serve `frontend/dist` (sample JSON included). Live feeds need a 
 2. Open a finding — counter-levers explain the sort.
 3. Resolve → bulletin / Fix Central; Interim → privileged-profile hygiene.
 4. Optional: guided routing / shop persona (answers stay in-browser); paste PSP tokens if you have them.
-5. Copy change packet for a ticket-ready Markdown artifact.
+5. Optionally compare a sanitized `QSYS2.PTF_INFO` / `QSYS2.GROUP_PTF_INFO` export.
+6. Complete local owner/change/disposition fields and download the Markdown evidence packet.
 
 Story in one line: GRC language (CVSS / OWASP access-control) becomes IBM i systems work (bulletin → PTF decision → 5250 verification → closure evidence).
 
 ## Portfolio card copy
 
-**IBM i Vulnerability Curator** — Curates public vulnerability intelligence for IBM i into Apply, Contain, or Monitor, then carries supported PTF findings into a synthetic 5250 verification rail built on IronTerm’s protocol-grounded terminal core. Includes guided shop context, bulletin/PTF/Fix Central paths, interim controls, feed honesty, and ticket-ready change packets. Pages serves a scheduled public snapshot with no open API or live host connection. Flagship walkthrough: CVE-2024-25050. Not a scanner of record.
+**IBM i Vulnerability Curator** — Converts IBM PSIRT disclosures into release-aware remediation and verification work. It groups related CVEs by bulletin, preserves PTF/group/APAR applicability, explains risk ordering, compares optional browser-local PTF inventory, and produces an evidence-ready Markdown packet. A source-gated IronTerm rail demonstrates authentic DSPPTF verification without credentials, transport, or a live partition. Static Pages deployment; not a scanner of record.
 
 ## Static Pages deploy (scheduled live snapshot)
 
@@ -163,6 +177,17 @@ python -m app.scripts.refresh_live_snapshot
 ## Design stance
 
 IBM Plex + OLED black grounds. Green and amber stay on strokes and accents only — no green-washed panels. No glow, scanline grids, side-tab cards, hero kickers, or pulse dots — patterns the [impeccable](https://impeccable.style/slop) detector treats as AI slop. Substance lives in the pulls, docks, and Resolve / Interim steps.
+
+## Current limitations
+
+- Inventory comparison trusts locally supplied exports and is not scanner-grade discovery.
+- Supersedence, prerequisites/co-requisites, IPL action, delayed application, and cover-letter warnings are shown only when a reliable IBM source can support them; the curator does not infer them.
+- `DSPPTF` is the only interactive screen currently released. `WRKPTFGRP` and additional-detail screens remain command coaching until exact source coordinates and behavior are available.
+- Ranking has an automated engineering calibration set, not an independent expert-reviewed benchmark.
+- No organizational workflow data is sent or synchronized; local fields disappear with the browser session.
+- The rolling 400-day queue is operational curation, not a historical vulnerability archive.
+
+The final project name is **IBM i Vulnerability Curator**. “Vuln Curator” remains only the compact header treatment.
 
 ## License and attribution
 

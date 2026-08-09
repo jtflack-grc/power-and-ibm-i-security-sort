@@ -227,7 +227,16 @@ async def build_live_result(
                     "id": "ibm",
                     "label": "IBM PSIRT",
                     "status": "ok" if psirt_ok else "empty",
-                    "detail": f"{len(psirt_findings)} IBM i CVEs discovered",
+                    "detail": (
+                        f"{len(psirt_findings)} IBM i CVEs · {len(bulletins)} bulletins · "
+                        f"{psirt_bundle.response_bytes / (1024 * 1024):.1f} MB · "
+                        f"{psirt_bundle.duration_ms} ms"
+                        + (" · cache" if psirt_bundle.from_cache else "")
+                    ),
+                    "response_bytes": psirt_bundle.response_bytes,
+                    "duration_ms": psirt_bundle.duration_ms,
+                    "bulletin_count": len(bulletins),
+                    "cve_count": len(psirt_findings),
                 }
             )
             if not psirt_ok:

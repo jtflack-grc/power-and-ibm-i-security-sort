@@ -3,6 +3,8 @@
  * Answers live in sessionStorage and only re-weight the local result.
  */
 import type { Bulletin, Finding, TriageMetrics, TriageResult } from "./types";
+import type { CaseWorkflow } from "./caseWorkflow";
+import { compareInventory, loadInventory } from "./inventory";
 
 export type Exposure = "internet" | "internal" | "restricted";
 export type Privilege = "elevated" | "standard";
@@ -292,7 +294,7 @@ export function applyShopContext(result: TriageResult, ctx: ShopContext): Triage
 export function changePacketMarkdown(
   f: Finding,
   ctx?: ShopContext | null,
-  meta?: { bulletin?: Bulletin | null; generatedAt?: string | null }
+  meta?: { bulletin?: Bulletin | null; generatedAt?: string | null; workflow?: CaseWorkflow | null }
 ): string {
   const lines: string[] = [
     `# Change packet — ${f.cve_id}`,
@@ -325,10 +327,38 @@ export function changePacketMarkdown(
         `- ${row.product_name}${row.product_id ? ` (${row.product_id})` : ""} · ${row.release ?? "release unresolved"}`,
         `  - Individual PTFs: ${row.individual_ptfs.join(", ") || "none source-associated"}`,
         `  - Group PTFs: ${row.group_ptfs.join(", ") || "none source-associated"}`,
+        `  - Group levels: ${Object.entries(row.group_ptf_levels ?? {}).map(([id, level]) => `${id} level ${level}`).join(", ") || "none source-associated"}`,
         `  - APARs: ${row.apars.join(", ") || "none source-associated"}`,
+        `  - Prerequisite PTFs: ${row.prerequisite_ptfs?.join(", ") || "none source-associated"}`,
+        `  - Co-requisite PTFs: ${row.corequisite_ptfs?.join(", ") || "none source-associated"}`,
+        `  - Supersedes: ${row.supersedes_ptfs?.join(", ") || "none source-associated"}`,
+        `  - Application instructions: ${row.application_instructions?.join(" | ") || "none captured from structured source columns"}`,
         `  - Extraction confidence: ${row.confidence}`
       );
     }
+  }
+  if (meta?.workflow) {
+    const workflow = meta.workflow;
+    lines.push(
+      "",
+      "## Local decision record",
+      `- Owner: ${workflow.owner || "unassigned"}`,
+      `- Target date: ${workflow.targetDate || "not set"}`,
+      `- Change record: ${workflow.changeRecord || "not set"}`,
+      `- Disposition: ${workflow.disposition.replace("_", " ")}`,
+      `- Exception expiry: ${workflow.exceptionExpiry || "not applicable"}`,
+      `- Reviewer: ${workflow.reviewer || "unassigned"}`
+    );
+  }
+  if (meta?.bulletin) {
+    const inventory = loadInventory();
+    const comparison = compareInventory(meta.bulletin, inventory);
+    lines.push("", "## Locally supplied inventory comparison");
+    if (!comparison.length) lines.push("- No source-associated PTF identifiers were available for comparison.");
+    for (const item of comparison) {
+      lines.push(`- ${item.kind === "group" ? "Group PTF" : "PTF"} ${item.id}${item.expectedLevel != null ? ` expected level ${item.expectedLevel}` : ""}: ${item.observed ? item.observed.status.replaceAll("_", " ") : "not observed"}${item.observed?.level != null ? ` (observed level ${item.observed.level})` : ""}`);
+    }
+    lines.push("- Inventory evidence was supplied locally and was not independently verified by the curator.");
   }
   lines.push("", "## Counter-levers");
   for (const l of f.levers ?? []) {

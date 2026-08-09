@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from html.parser import HTMLParser
@@ -27,6 +28,17 @@ _PRODUCT_ID_RE = re.compile(r"\b(\d{4})-?([A-Z0-9]{3})\b", re.IGNORECASE)
 class PsirtBundle:
     findings: dict[str, Finding]
     bulletins: list[Bulletin]
+    response_bytes: int = 0
+    duration_ms: int = 0
+    from_cache: bool = False
+
+
+@dataclass
+class _LoadedPayload:
+    payload: Any
+    response_bytes: int
+    duration_ms: int
+    from_cache: bool
 
 
 class _TextExtractor(HTMLParser):
@@ -278,13 +290,19 @@ def parse_psirt_payload(
 
 async def _load_psirt_payload(
     client: httpx.AsyncClient, cache: DiskCache
-) -> Any:
+) -> _LoadedPayload:
     """Return cached or freshly downloaded PSIRT JSON without a cache round-trip."""
     cache_key = "ibm_psirt:ibm-i:v1"
     cached = cache.get(cache_key)
     if cached is not None:
-        return cached
+        return _LoadedPayload(
+            payload=cached,
+            response_bytes=len(json.dumps(cached).encode()),
+            duration_ms=0,
+            from_cache=True,
+        )
 
+    started = time.perf_counter()
     body = bytearray()
     async with client.stream(
         "GET",
@@ -314,15 +332,20 @@ async def _load_psirt_payload(
     payload = json.loads(body)
     _validate_payload_contract(payload)
     cache.set(cache_key, payload)
-    return payload
+    return _LoadedPayload(
+        payload=payload,
+        response_bytes=len(body),
+        duration_ms=round((time.perf_counter() - started) * 1000),
+        from_cache=False,
+    )
 
 
 async def collect_ibmi_psirt(
     client: httpx.AsyncClient, cache: DiskCache, *, days_back: int = 400
 ) -> dict[str, Finding]:
     cutoff = (datetime.now(timezone.utc) - timedelta(days=max(1, days_back))).date().isoformat()
-    payload = await _load_psirt_payload(client, cache)
-    return parse_psirt_payload(payload, published_after=cutoff)
+    loaded = await _load_psirt_payload(client, cache)
+    return parse_psirt_payload(loaded.payload, published_after=cutoff)
 
 
 async def collect_ibmi_psirt_bundle(
@@ -330,8 +353,12 @@ async def collect_ibmi_psirt_bundle(
 ) -> PsirtBundle:
     """Collect the same bounded PSIRT feed while retaining bulletin structure."""
     cutoff = (datetime.now(timezone.utc) - timedelta(days=max(1, days_back))).date().isoformat()
-    payload = await _load_psirt_payload(client, cache)
-    return parse_psirt_bundle(payload, published_after=cutoff)
+    loaded = await _load_psirt_payload(client, cache)
+    bundle = parse_psirt_bundle(loaded.payload, published_after=cutoff)
+    bundle.response_bytes = loaded.response_bytes
+    bundle.duration_ms = loaded.duration_ms
+    bundle.from_cache = loaded.from_cache
+    return bundle
 
 
 def enrich_psirt_from_nvd(

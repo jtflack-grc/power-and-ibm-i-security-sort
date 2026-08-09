@@ -38,6 +38,13 @@ jobs:
       - name: Install backend deps
         run: pip install -r backend/requirements.txt pytest
 
+      - name: Check Python dependency integrity and retained licenses
+        run: |
+          pip check
+          test -s LICENSE
+          test -s frontend/public/ironterm/LICENSE
+          test -s frontend/public/ironterm/UPSTREAM_COMMIT
+
       - name: Run backend tests
         env:
           PYTHONPATH: backend
@@ -53,9 +60,17 @@ jobs:
         working-directory: frontend
         run: npm ci
 
+      - name: Audit production dependencies
+        working-directory: frontend
+        run: npm audit --omit=dev --audit-level=high
+
       - name: Type-check static SPA
         working-directory: frontend
         run: npx tsc -b
+
+      - name: Retrieve previous published snapshot
+        continue-on-error: true
+        run: curl --fail --silent --show-error --max-time 30 --output /tmp/previous-live.json "https://jtflack-grc.github.io/power-and-ibm-i-security-sort/live-triage.json"
 
       - name: Refresh live triage snapshot
         id: snapshot
@@ -63,6 +78,7 @@ jobs:
           PYTHONPATH: backend
           # Optional — fuller NVD recipe when set as a repo secret. Never baked into SPA.
           NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+          PREVIOUS_SNAPSHOT_PATH: /tmp/previous-live.json
         run: |
           python -m app.scripts.refresh_live_snapshot --force-refresh
           test -f frontend/public/live-triage.json

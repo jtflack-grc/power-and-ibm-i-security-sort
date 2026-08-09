@@ -16,16 +16,46 @@ import asyncio
 import json
 import os
 import sys
+import hashlib
 from pathlib import Path
 from typing import Any
 
 from app.triage_service import build_live_result
+from app.models import Bulletin
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_OUT = REPO_ROOT / "frontend" / "public" / "live-triage.json"
 PUBLISH_NOTE = "Published snapshot for GitHub Pages (scheduled refresh)."
 MIN_PSIRT_CVES = 75
 MIN_PSIRT_BULLETINS = 20
+
+
+def _bulletin_fingerprint(bulletin: Any) -> str:
+    payload = bulletin.model_dump(mode="json", exclude={"change_status"})
+    return hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
+
+
+def annotate_snapshot_changes(result: Any, previous_path: Path | None) -> None:
+    """Mark bulletin additions/changes against the last deployed static snapshot."""
+    if previous_path is None or not previous_path.is_file():
+        return
+    try:
+        previous = json.loads(previous_path.read_text(encoding="utf-8"))
+        old_bulletins = {
+            item.get("bulletin_id"): item
+            for item in previous.get("bulletins", [])
+            if isinstance(item, dict) and item.get("bulletin_id")
+        }
+        result.previous_snapshot_at = previous.get("generated_at")
+        for bulletin in result.bulletins:
+            old = old_bulletins.get(bulletin.bulletin_id)
+            if old is None:
+                bulletin.change_status = "new"
+                continue
+            old_hash = _bulletin_fingerprint(Bulletin.model_validate(old))
+            bulletin.change_status = "unchanged" if old_hash == _bulletin_fingerprint(bulletin) else "modified"
+    except (OSError, ValueError, TypeError, json.JSONDecodeError):
+        return
 
 
 def publication_safe(result: Any) -> tuple[bool, str]:
@@ -61,6 +91,8 @@ async def refresh(out_path: Path, force_refresh: bool) -> int:
         extra_notes=[PUBLISH_NOTE],
         max_bulletin_fetches=None,
     )
+    previous_raw = os.environ.get("PREVIOUS_SNAPSHOT_PATH")
+    annotate_snapshot_changes(result, Path(previous_raw) if previous_raw else None)
     safe, reason = publication_safe(result)
     if not safe:
         print(f"ERROR: {reason}.", file=sys.stderr)

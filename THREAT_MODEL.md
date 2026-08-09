@@ -15,7 +15,16 @@
 | PTF paired to wrong release | Same-row association; ambiguity remains unassociated | IBM table changes require parser maintenance |
 | Arbitrary terminal or host access | Named fixtures, validated fields, fixed origin, no transport | Scenario is educational, not observed state |
 | XSS from bulletin HTML | Text extraction, sanitization, React text rendering | External links still leave the application |
-| Sensitive inventory disclosure | Session-local handling and no upload | Users must sanitize exported or shared material |
+| Sensitive inventory disclosure | Bounded client-side parsing, extension/size checks, session-only storage, no upload | Users must sanitize exported or shared material |
+| Hostile pasted inventory | Control-character removal, identifier allowlists, line/byte ceilings, React text rendering | Valid-looking false data can still mislead and must be independently verified |
+| Exported packet disclosure | Client-side generation with explicit local-evidence labels | The user controls where downloaded Markdown is stored or shared |
+
+The inventory parser accepts only recognizable IBM i PTF and group-PTF tokens,
+normalizes a small status vocabulary, ignores unrelated lines, and caps input at
+200 KB / 5,000 lines. It never interprets input as HTML, code, terminal records,
+commands, paths, or network destinations. CSP remains self-only for scripts,
+styles, frames, and connections; local file selection does not add a network
+source.
 
 ## Non-goals
 

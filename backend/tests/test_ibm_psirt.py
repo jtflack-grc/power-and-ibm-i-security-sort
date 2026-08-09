@@ -173,3 +173,18 @@ def test_force_refresh_parses_fresh_bundle_without_cache_round_trip(tmp_path):
     assert [bulletin.bulletin_id for bulletin in bundle.bulletins] == [
         "ibm-psirt-123"
     ]
+    assert bundle.response_bytes > 0
+    assert bundle.from_cache is False
+
+
+def test_psirt_rejects_html_outage_page_with_diagnostic(tmp_path):
+    def respond(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, text="<h1>Site Unavailable</h1>", headers={"content-type": "text/html"})
+
+    async def collect():
+        cache = DiskCache(tmp_path, ttl_seconds=0)
+        async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as client:
+            return await collect_ibmi_psirt_bundle(client, cache)
+
+    with pytest.raises(ValueError, match=r"text/html.*HTTP 200"):
+        asyncio.run(collect())
