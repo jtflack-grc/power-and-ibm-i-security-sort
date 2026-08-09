@@ -5,8 +5,7 @@ import { OutboundBuilder } from "./tn5250/src/proto/OutboundBuilder.js";
 import { Aid, Models } from "./tn5250/src/proto/Constants.js";
 import { Renderer } from "./tn5250/src/ui/Renderer.js";
 import { InputController } from "./tn5250/src/ui/InputController.js";
-import { Oia } from "./tn5250/src/ui/Oia.js";
-import { DSPPTF_STATUS, buildDspptfStatusRecords, dspptfRows } from "./fixtures/dspptf-status.js";
+import { DSPPTF_STATUS, buildDspptfStatusRecords } from "./fixtures/dspptf-status.js";
 
 const canvas = document.querySelector("#screen");
 const status = document.querySelector("#status");
@@ -19,23 +18,11 @@ const renderer = new Renderer(canvas, screen);
 const MAX_RECORDS = 4;
 const MAX_RECORD_BYTES = 16_384;
 let channelToken = null;
-const oia = new Oia({
-  conn: document.querySelector("#oia-conn"),
-  sys: document.querySelector("#oia-sys"),
-  lock: document.querySelector("#oia-lock"),
-  insert: document.querySelector("#oia-insert"),
-  alarm: document.querySelector("#oia-alarm"),
-  msg: document.querySelector("#oia-msg"),
-  model: document.querySelector("#oia-model"),
-  cursor: document.querySelector("#oia-cursor"),
-});
+let activePtfs = [];
 
 function draw() {
   renderer.draw();
-  oia.setLocked(screen.keyboardLocked);
-  oia.setCursor(Math.floor(screen.cursor / screen.cols) + 1, (screen.cursor % screen.cols) + 1);
   if (screen.alarm) {
-    oia.flashAlarm();
     screen.alarm = false;
   }
 }
@@ -79,7 +66,7 @@ function emitAid(aid) {
       }))
       .find((field) => field.value === "5");
     if (selected) {
-      status.textContent = `${dspptfRows[selected.index]?.ptf || "PTF"}: DETAILS FIXTURE SOURCE-PENDING`;
+      status.textContent = `${activePtfs[selected.index] || "PTF"}: OPTION 5 DESTINATION CAPTURE REQUIRED`;
       screen.alarm = true;
     } else {
       status.textContent = "TYPE 5 BESIDE A PTF, THEN PRESS ENTER";
@@ -119,8 +106,15 @@ new InputController({
 function loadScenario(message) {
   if (message.scenario !== DSPPTF_STATUS) return;
   if (typeof message.channelToken !== "string" || message.channelToken.length > 64) return;
+  if (!Array.isArray(message.ptfs) || message.ptfs.length === 0 || message.ptfs.length > 7) return;
+  const ptfs = message.ptfs.map((value) => String(value).toUpperCase());
+  if (ptfs.some((value) => !/^[A-Z]{2}\d{5,7}$/.test(value))) return;
+  const productId = String(message.productId ?? "").toUpperCase();
+  const release = String(message.release ?? "").toUpperCase();
+  if (!/^\d{4}[A-Z0-9]{3}$/.test(productId) || !/^V[1-9]R\dM\d$/.test(release)) return;
   channelToken = message.channelToken;
-  const records = buildDspptfStatusRecords({ system: "CURATOR" });
+  activePtfs = ptfs;
+  const records = buildDspptfStatusRecords({ system: "CURATOR", ptfs, productId, release });
   if (
     records.length === 0 ||
     records.length > MAX_RECORDS ||
@@ -137,10 +131,7 @@ function loadScenario(message) {
   }
   screen.keyboardLocked = false;
   empty.classList.add("hidden");
-  status.textContent = "IBM-SOURCED DSPPTF FIXTURE";
-  oia.setConnection("connected");
-  oia.setSystem("CURATOR");
-  oia.setModel("TN5250 · 5292-2");
+  status.textContent = "";
   draw();
 }
 

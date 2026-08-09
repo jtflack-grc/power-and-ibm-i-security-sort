@@ -12,7 +12,7 @@ const SF = 0x1d;
 
 export const DSPPTF_STATUS = "dspptf-status";
 
-const rows = [
+const fallbackRows = [
   ["SI76195", "Permanently applied", "None"],
   ["SI76201", "Temporarily applied", "None"],
   ["SI75840", "Superseded", "None"],
@@ -50,7 +50,19 @@ function assertFits(row, col, value) {
   }
 }
 
-export function buildDspptfStatusRecords({ system = "CURATOR" } = {}) {
+export function buildDspptfStatusRecords({
+  system = "CURATOR",
+  ptfs = [],
+  productId = "5770SS1",
+  release = "V7R4M0",
+} = {}) {
+  const scenarioRows = ptfs.length
+    ? ptfs.slice(0, 7).map((ptf, index) => [
+        ptf,
+        index === 0 ? "Permanently applied" : "Temporarily applied",
+        "None",
+      ])
+    : fallbackRows;
   const stream = [ESC, CU, ESC, CFT, ESC, WTD, 0x00, 0x08];
   // SOH length 7; disable every PF key except PF3 and PF12. F11/F17 remain legible because
   // IBM's source panel shows them, but the terminal will reject their AIDs
@@ -60,9 +72,9 @@ export function buildDspptfStatusRecords({ system = "CURATOR" } = {}) {
   const writes = [
     [1, 33, "Display PTF Status", 0x22],
     [2, 61, `System:   ${system}`.slice(0, 20), 0x22],
-    [3, 2, "Product ID  . . . . . . . . . . . . . :   5770SS1"],
+    [3, 2, `Product ID  . . . . . . . . . . . . . :   ${productId}`],
     [4, 2, "IPL source  . . . . . . . . . . . . . :   ##MACH#B"],
-    [5, 2, "Release of base option  . . . . . . . :   V7R4M0    L00"],
+    [5, 2, `Release of base option  . . . . . . . :   ${release}    L00`],
     [7, 2, "Type options, press Enter."],
     [8, 4, "5=Display PTF details   6=Print cover letter   8=Display cover letter", 0x30],
     [9, 4, "10=Display PTF apply information", 0x30],
@@ -77,7 +89,7 @@ export function buildDspptfStatusRecords({ system = "CURATOR" } = {}) {
     stream.push(...text(row, col, value, attr));
   }
 
-  rows.forEach(([ptf, status, action], index) => {
+  scenarioRows.forEach(([ptf, status, action], index) => {
     const row = 13 + index;
     stream.push(...input(row, 2, 2));
     stream.push(...text(row, 7, ptf));
@@ -89,4 +101,4 @@ export function buildDspptfStatusRecords({ system = "CURATOR" } = {}) {
   return [stream];
 }
 
-export const dspptfRows = rows.map(([ptf, status, action]) => ({ ptf, status, action }));
+export const fallbackDspptfRows = fallbackRows.map(([ptf, status, action]) => ({ ptf, status, action }));

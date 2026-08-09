@@ -64,6 +64,8 @@ def test_scenario_message_boundary_rejects_caller_records():
     assert "event.source === frameRef.current?.contentWindow" in rail
     assert "channelToken" in scenario and "channelToken" in rail
     assert "MAX_RECORD_BYTES" in scenario and "MAX_RECORDS" in scenario
+    assert "message.ptfs.length > 7" in scenario
+    assert "^[A-Z]{2}\\d{5,7}$" in scenario
 
 
 def test_scenario_browser_hardening_is_present():
