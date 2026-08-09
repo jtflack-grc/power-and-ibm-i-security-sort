@@ -13,6 +13,7 @@ interface Props {
 }
 
 const BUCKETS: Array<Bucket | "all"> = ["all", "urgent", "watch", "low"];
+const LANES: Array<ActionLane | "all"> = ["all", "apply", "contain", "monitor"];
 const FOCUS_LIMIT = 40;
 /** Match backend RankerConfig.ancient_days (~7y). */
 const MUSEUM_AGE_DAYS = 2555;
@@ -183,18 +184,19 @@ export function FindingsPanel({
           </button>
         )}
       </div>
-      {laneFilter !== "all" && (
-        <div className="findings-filters">
-          <div className="filter-row-label">Dock filter</div>
+      <div className="findings-filters findings-filters-compact">
+        <div className="filter-row-label">Action</div>
+        {LANES.map((lane) => (
           <button
+            key={lane}
             type="button"
-            className="chip active"
-            onClick={() => onLaneFilter("all")}
+            className={`chip ${laneFilter === lane ? "active" : ""}`}
+            onClick={() => onLaneFilter(lane)}
           >
-            {laneFilter} ✕
+            {lane}
           </button>
-        </div>
-      )}
+        ))}
+      </div>
       <div className="findings-focus-bar">
         <button
           type="button"

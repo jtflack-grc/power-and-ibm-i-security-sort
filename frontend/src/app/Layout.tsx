@@ -5,12 +5,13 @@ import {
   type ShopContext,
 } from "../shopContext";
 import { FLAGSHIP_CVE, FlagshipWalkthrough } from "./FlagshipWalkthrough";
-import { ActionLanesFlow, type ActionLane } from "./ActionLanesFlow";
+import type { ActionLane } from "./ActionLanesFlow";
 import { FeedHealthStrip } from "./FeedHealthStrip";
 import { FindingsPanel } from "./FindingsPanel";
 import { IssueDetailPanel } from "./IssueDetailPanel";
 import { LiveFailCallout, LiveWaitCallout } from "./LiveStatusCallouts";
 import { LiveProgressBanner } from "./LiveProgressBanner";
+import { PtfCommandCoach } from "./PtfCommandCoach";
 import { ShopContextPanel } from "./ShopContextPanel";
 import { VerificationRail } from "./VerificationRail";
 
@@ -380,18 +381,11 @@ export function Layout({
 
         <section className={`panel ${pane !== "flow" ? "hidden-mobile" : ""}`}>
           <div className="panel-head">
-            <h2>Actions</h2>
-            <div className="meta">Work docks</div>
+            <h2>Evidence</h2>
+            <div className="meta">IBM i command path</div>
           </div>
           <div className="panel-body panel-body-docks">
-            <ActionLanesFlow
-              findings={scopedFindings}
-              selected={selectedResolved}
-              settling={sampleLoading || publishedLoading || liveRunning}
-              laneFilter={laneFilter}
-              onLaneFilter={setLaneFilter}
-              onSelect={openFinding}
-            />
+            <PtfCommandCoach finding={selectedResolved} />
             <VerificationRail finding={selectedResolved} />
             {result && (
               <div className="feed-aside-wrap">
