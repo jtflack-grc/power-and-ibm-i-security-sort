@@ -166,7 +166,7 @@ export function Layout({
           </button>
           {onOpenCredits && (
             <button type="button" className="button" onClick={onOpenCredits}>
-              Credits
+              Help &amp; credits
             </button>
           )}
           {publishedAvailable && !backendAvailable && (
