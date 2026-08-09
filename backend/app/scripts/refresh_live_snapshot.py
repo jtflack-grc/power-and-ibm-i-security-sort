@@ -24,6 +24,22 @@ from app.triage_service import build_live_result
 REPO_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_OUT = REPO_ROOT / "frontend" / "public" / "live-triage.json"
 PUBLISH_NOTE = "Published snapshot for GitHub Pages (scheduled refresh)."
+MIN_PSIRT_CVES = 75
+MIN_PSIRT_BULLETINS = 20
+
+
+def publication_safe(result: Any) -> tuple[bool, str]:
+    """Prevent a degraded discovery run from replacing a healthy Pages snapshot."""
+    ibm = next((item for item in result.feed_health if item.get("id") == "ibm"), {})
+    if ibm.get("status") != "ok":
+        return False, "IBM PSIRT was not healthy; refusing degraded Pages publication"
+    if len(result.findings) < MIN_PSIRT_CVES:
+        return False, f"PSIRT finding count {len(result.findings)} is below safety floor {MIN_PSIRT_CVES}"
+    if len(result.bulletins) < MIN_PSIRT_BULLETINS:
+        return False, f"PSIRT bulletin count {len(result.bulletins)} is below safety floor {MIN_PSIRT_BULLETINS}"
+    if any(finding.bulletin_id is None for finding in result.findings):
+        return False, "one or more published findings lack PSIRT bulletin membership"
+    return True, "PSIRT publication gate passed"
 
 
 async def _log_progress(
@@ -45,8 +61,9 @@ async def refresh(out_path: Path, force_refresh: bool) -> int:
         extra_notes=[PUBLISH_NOTE],
         max_bulletin_fetches=None,
     )
-    if not result.findings:
-        print("ERROR: snapshot produced zero findings — refusing to write.", file=sys.stderr)
+    safe, reason = publication_safe(result)
+    if not safe:
+        print(f"ERROR: {reason}.", file=sys.stderr)
         for note in result.notes or []:
             print(f"  note: {note}", file=sys.stderr)
         return 1

@@ -40,7 +40,6 @@ jobs:
 
       - name: Refresh live triage snapshot
         id: snapshot
-        continue-on-error: true
         env:
           PYTHONPATH: backend
           # Optional — fuller NVD recipe when set as a repo secret. Never baked into SPA.
@@ -49,12 +48,6 @@ jobs:
           python -m app.scripts.refresh_live_snapshot --force-refresh
           test -f frontend/public/live-triage.json
           echo "Live snapshot ready for Pages bundle."
-
-      - name: Snapshot fallback notice
-        if: steps.snapshot.outcome != 'success'
-        run: |
-          echo "::warning::Live snapshot failed — Pages will ship with sample fixture only."
-          rm -f frontend/public/live-triage.json
 
       - uses: actions/setup-node@v4
         with:
