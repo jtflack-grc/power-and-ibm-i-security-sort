@@ -151,9 +151,9 @@ export function Layout({
           rel="noreferrer"
         >
           <div className="brand-wordmark">
-            <span>Power Vuln Curator</span>
+            <span>Power & Z Vuln Curator</span>
           </div>
-          <div className="brand-sub">Power System Vulnerability Curator · i on GRC</div>
+          <div className="brand-sub">IBM Power & Z Vulnerability Curator · i on GRC</div>
         </a>
         <div className="header-actions">
           <button type="button" className="button" onClick={onStartIntake}>

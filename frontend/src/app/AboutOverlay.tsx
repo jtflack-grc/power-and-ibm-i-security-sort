@@ -38,11 +38,11 @@ export function AboutOverlay({ mode, onClose, onReplayIntro }: Props) {
         {isIntro ? (
           <>
             <p className="about-kicker">Before the queue</p>
-            <h1 id="about-title">Power System Vulnerability Curator</h1>
+            <h1 id="about-title">IBM Power &amp; Z Vulnerability Curator</h1>
             <p className="welcome-lead">
-              This is a curator, not a scanner. It turns public CVE intel for IBM i, AIX, Linux on
-              Power, and z/OS into a shared Apply / Contain / Monitor work queue — with explainable
-              counter-levers instead of CVSS-alone panic.
+              This is a curator, not a scanner. It turns public CVE intel for IBM Power (IBM i,
+              AIX, Linux on Power) and IBM Z (z/OS) into a shared Apply / Contain / Monitor work
+              queue — with explainable counter-levers instead of CVSS-alone panic.
             </p>
             <ul className="welcome-method">
               <li>
@@ -54,7 +54,7 @@ export function AboutOverlay({ mode, onClose, onReplayIntro }: Props) {
                 uploaded
               </li>
               <li>
-                <strong>Work</strong> Open a finding for Resolve (bulletin / PTF) and Interim
+                <strong>Work</strong> Open a finding for Resolve (bulletin / PTF / APAR) and Interim
                 controls, then copy a change packet if you want
               </li>
             </ul>
@@ -70,15 +70,19 @@ export function AboutOverlay({ mode, onClose, onReplayIntro }: Props) {
         ) : (
           <>
             <p className="about-kicker">Credits</p>
-            <h1 id="about-title">Power System Vulnerability Curator</h1>
+            <h1 id="about-title">IBM Power &amp; Z Vulnerability Curator</h1>
             <p className="welcome-lead">
               Built by <strong>John Flack</strong> (jtflack-grc) as a portfolio artifact that
-              translates GRC / vuln-management language into Power systems work.
+              translates GRC / vuln-management language into IBM Power and IBM Z systems work.
             </p>
             <ul className="welcome-method">
               <li>
                 <strong>What it is</strong> A curator between risk language and change work — KEV,
                 NVD, EPSS, OWASP context, IBM bulletin hints → Apply / Contain / Monitor
+              </li>
+              <li>
+                <strong>Platform scope</strong> IBM Power = IBM i, AIX, Linux on Power; IBM Z =
+                z/OS
               </li>
               <li>
                 <strong>What it isn&apos;t</strong> A scanner of record, an authenticated enterprise

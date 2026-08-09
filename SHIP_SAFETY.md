@@ -1,4 +1,4 @@
-# Ship safety trainer — Power System Vulnerability Curator
+# Ship safety trainer — IBM Power & Z Vulnerability Curator
 
 Run this before push / portfolio link. Public surface is **GitHub Pages with a scheduled live snapshot** (static JSON). FastAPI on-demand live feeds are for local/Docker demos only.
 
@@ -68,7 +68,7 @@ npm run build
 
 ## 6. Portfolio copy reminder
 
-Footer/README claim: practice demo, public feeds, not a scanner of record. Keep that honesty.
+Footer/README claim: practice demo, public feeds, not a scanner of record. Keep that honesty. Platform taxonomy should remain explicit: **IBM Power = IBM i / AIX / Linux on Power; IBM Z = z/OS.**
 
 ## Sign-off
 
