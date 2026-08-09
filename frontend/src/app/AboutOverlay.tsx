@@ -1,3 +1,5 @@
+import { useEffect, useRef } from "react";
+
 const INTRO_SEEN_KEY = "psvc-intro-seen-v2";
 
 export function hasSeenIntro(): boolean {
@@ -27,6 +29,14 @@ interface Props {
 
 export function AboutOverlay({ mode, onClose, onReplayIntro, onStartIntake }: Props) {
   const isIntro = mode === "intro";
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const focusable = dialogRef.current?.querySelector<HTMLElement>("button, a[href], select, [tabindex]:not([tabindex='-1'])");
+    focusable?.focus();
+    return () => previous?.focus();
+  }, [mode]);
 
   const enter = () => {
     markIntroSeen();
@@ -40,8 +50,33 @@ export function AboutOverlay({ mode, onClose, onReplayIntro, onStartIntake }: Pr
   };
 
   return (
-    <div className="overlay" role="dialog" aria-modal="true" aria-labelledby="about-title">
-      <div className={`overlay-card welcome-card about-card ${isIntro ? "about-intro" : "about-credits"}`}>
+    <div
+      className="overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="about-title"
+      onKeyDown={(event) => {
+        if (event.key === "Escape") {
+          event.preventDefault();
+          onClose();
+          return;
+        }
+        if (event.key !== "Tab" || !dialogRef.current) return;
+        const items = [...dialogRef.current.querySelectorAll<HTMLElement>("button, a[href], select, [tabindex]:not([tabindex='-1'])")]
+          .filter((item) => !item.hasAttribute("disabled"));
+        if (!items.length) return;
+        const first = items[0];
+        const last = items[items.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
+      }}
+    >
+      <div ref={dialogRef} className={`overlay-card welcome-card about-card ${isIntro ? "about-intro" : "about-credits"}`}>
         {isIntro ? (
           <>
             <p className="about-kicker">Before the queue</p>
