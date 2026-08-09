@@ -36,7 +36,12 @@ jobs:
           cache-dependency-path: backend/requirements.txt
 
       - name: Install backend deps
-        run: pip install -r backend/requirements.txt
+        run: pip install -r backend/requirements.txt pytest
+
+      - name: Run backend tests
+        env:
+          PYTHONPATH: backend
+        run: pytest -q backend/tests
 
       - name: Refresh live triage snapshot
         id: snapshot
@@ -72,8 +77,8 @@ jobs:
         working-directory: frontend
         # Relative base so the demo works under https://user.github.io/repo/
         run: |
-          npm ci || npm install
-          npx vite build --base=./
+          npm ci
+          npm run build -- --base=./
           # Ensure Pages does not run Jekyll against the SPA
           touch dist/.nojekyll
 
