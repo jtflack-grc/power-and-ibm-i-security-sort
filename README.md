@@ -142,7 +142,7 @@ GitHub Action [`.github/workflows/pages.yml`](.github/workflows/pages.yml) runs 
 
 If PSIRT is unhealthy, materially narrow, or loses bulletin membership, the workflow stops before deployment. Pages retains the prior build rather than publishing an NVD fallback over a healthy PSIRT snapshot.
 
-See [`ARCHITECTURE.md`](ARCHITECTURE.md) and [`THREAT_MODEL.md`](THREAT_MODEL.md) for the data flow, trust boundaries, and failure behavior.
+See [`ARCHITECTURE.md`](ARCHITECTURE.md) and [`THREAT_MODEL.md`](THREAT_MODEL.md) for the data flow, trust boundaries, and failure behavior. [`RANKING_MODEL.md`](RANKING_MODEL.md) records queue-order invariants, signal limitations, and the current engineering calibration set.
 
 Optional: add repo secret `NVD_API_KEY` for a fuller NVD recipe in Actions (never baked into the SPA).
 
