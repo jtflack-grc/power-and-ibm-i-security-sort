@@ -71,6 +71,9 @@ class Bulletin(BaseModel):
     last_modified: str | None = None
     cve_ids: list[str] = Field(default_factory=list)
     applicability: list[BulletinApplicability] = Field(default_factory=list)
+    unassociated_individual_ptfs: list[str] = Field(default_factory=list)
+    unassociated_group_ptfs: list[str] = Field(default_factory=list)
+    unassociated_apars: list[str] = Field(default_factory=list)
     affected_source_text: str = ""
 
 

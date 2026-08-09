@@ -434,6 +434,7 @@ async def build_live_result(
                 client,
                 cache,
                 ranked,
+                bulletins=bulletins,
                 max_bulletin_fetches=max_bulletin_fetches,
             )
             loaded = guidance_stats["loaded"]

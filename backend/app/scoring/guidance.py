@@ -20,7 +20,7 @@ import httpx
 from bs4 import BeautifulSoup
 
 from app.collectors.cache import DiskCache
-from app.models import Finding, Platform
+from app.models import Bulletin, BulletinApplicability, Finding, Platform
 
 # IBM i PTF/APAR identifiers — best-effort extraction from public IBM bulletins.
 PTF_TOKEN_RE = re.compile(
@@ -35,11 +35,69 @@ APAR_RE = re.compile(
 FIX_LINE_RE = re.compile(
     r"(?i)(apply|install|upgrade|update|remediat|fix|patch|ptf|apar).{0,160}"
 )
+IBMI_RELEASE_RE = re.compile(r"\b(?:7\.([2-6])|V7R([2-6])M\d)\b", re.IGNORECASE)
+PRODUCT_ID_RE = re.compile(r"\b(\d{4})-?([A-Z0-9]{3})\b", re.IGNORECASE)
 
 
 def _sanitize(text: str, limit: int = 500) -> str:
     cleaned = " ".join("".join(ch for ch in text if ord(ch) >= 32).split())
     return cleaned[: limit - 1] + "…" if len(cleaned) > limit else cleaned
+
+
+def _release_pair(text: str) -> tuple[str | None, str | None]:
+    match = IBMI_RELEASE_RE.search(text)
+    if not match:
+        return None, None
+    minor = match.group(1) or match.group(2)
+    return f"7.{minor}", f"V7R{minor}M0"
+
+
+def _row_product_id(text: str) -> str | None:
+    match = PRODUCT_ID_RE.search(text)
+    return f"{match.group(1)}{match.group(2)}".upper() if match else None
+
+
+def _extract_table_remediation_rows(soup: BeautifulSoup, url: str) -> list[dict[str, Any]]:
+    """Keep only table rows that can support an explicit release-to-remedy link."""
+    rows: list[dict[str, Any]] = []
+    for table_index, table in enumerate(soup.find_all("table")):
+        headers: list[str] = []
+        for row_index, tr in enumerate(table.find_all("tr")):
+            cells = [_sanitize(cell.get_text(" ", strip=True), 500) for cell in tr.find_all(["th", "td"])]
+            if not cells:
+                continue
+            if tr.find_all("th") and not tr.find_all("td"):
+                headers = [cell.lower() for cell in cells]
+                continue
+            text = _sanitize(" | ".join(cells), 1600)
+            release, release_system = _release_pair(text)
+            ptfs = sorted({value.upper() for value in PTF_TOKEN_RE.findall(text)})
+            groups = sorted({value.upper() for value in GROUP_PTF_TOKEN_RE.findall(text)})
+            apars: list[str] = []
+            for match in APAR_RE.finditer(text):
+                token = match.group(1) if match.lastindex else match.group(0)
+                if token:
+                    apars.append(token.upper())
+            if not (ptfs or groups or apars):
+                continue
+            columns = {
+                headers[index] if index < len(headers) and headers[index] else f"column_{index + 1}": value
+                for index, value in enumerate(cells)
+            }
+            rows.append({
+                "row_id": f"table-{table_index + 1}-row-{row_index + 1}",
+                "release": release,
+                "release_system": release_system,
+                "product_id": _row_product_id(text),
+                "individual_ptfs": ptfs,
+                "group_ptfs": groups,
+                "apars": sorted(set(apars)),
+                "source_excerpt": text,
+                "source_columns": columns,
+                "source_url": url,
+                "confidence": "structured" if release else "unresolved",
+            })
+    return rows
 
 
 def _hydrate_fix_tokens(record: dict[str, Any]) -> dict[str, Any]:
@@ -177,7 +235,7 @@ async def scrape_bulletin_fixes(
     cache: DiskCache,
     url: str,
 ) -> dict[str, Any]:
-    cache_key = f"bulletin_fixes:{url}"
+    cache_key = f"bulletin_fixes:v2:{url}"
     cached = cache.get(cache_key)
     if cached is not None:
         return _hydrate_fix_tokens(cached)
@@ -190,6 +248,7 @@ async def scrape_bulletin_fixes(
         "summary": None,
         "affected": None,
         "body_loaded": False,
+        "remediation_rows": [],
     }
     if not _is_allowed_bulletin_fetch(url):
         cache.set(cache_key, record)
@@ -211,6 +270,7 @@ async def scrape_bulletin_fixes(
             cache.set(cache_key, record)
             return record
         soup = BeautifulSoup(resp.text, "lxml")
+        record["remediation_rows"] = _extract_table_remediation_rows(soup, url)
         text = _sanitize(soup.get_text(" ", strip=True), limit=20000)
         if "site unavailable" in text.lower() or len(text) < 240:
             return record
@@ -280,6 +340,41 @@ async def scrape_bulletin_fixes(
     record = _hydrate_fix_tokens(record)
     cache.set(cache_key, record)
     return record
+
+
+def attach_bulletin_remediation(
+    bulletins: list[Bulletin], records: dict[str, dict[str, Any]]
+) -> None:
+    """Attach only unambiguous table-row remedies; retain everything else at bulletin level."""
+    for bulletin in bulletins:
+        record = records.get(bulletin.url, {})
+        associated_ptfs: set[str] = set()
+        associated_groups: set[str] = set()
+        associated_apars: set[str] = set()
+        for remedy in record.get("remediation_rows") or []:
+            release = remedy.get("release")
+            product_id = remedy.get("product_id")
+            if not release:
+                continue
+            matches = [
+                row for row in bulletin.applicability
+                if row.release == release
+                and (not product_id or not row.product_id or row.product_id == product_id)
+            ]
+            if len(matches) != 1:
+                continue
+            target = matches[0]
+            target.individual_ptfs = list(dict.fromkeys([*target.individual_ptfs, *remedy.get("individual_ptfs", [])]))
+            target.group_ptfs = list(dict.fromkeys([*target.group_ptfs, *remedy.get("group_ptfs", [])]))
+            target.apars = list(dict.fromkeys([*target.apars, *remedy.get("apars", [])]))
+            target.confidence = "structured"
+            target.source_excerpt = remedy.get("source_excerpt") or target.source_excerpt
+            associated_ptfs.update(target.individual_ptfs)
+            associated_groups.update(target.group_ptfs)
+            associated_apars.update(target.apars)
+        bulletin.unassociated_individual_ptfs = sorted(set(record.get("ptfs") or []) - associated_ptfs)
+        bulletin.unassociated_group_ptfs = sorted(set(record.get("ptf_groups") or []) - associated_groups)
+        bulletin.unassociated_apars = sorted(set(record.get("apars") or []) - associated_apars)
 
 
 def _fix_central_links(finding: Finding) -> list[dict[str, str]]:
@@ -437,6 +532,7 @@ async def enrich_guidance(
     client: httpx.AsyncClient,
     cache: DiskCache,
     findings: list[Finding],
+    bulletins: list[Bulletin] | None = None,
     max_bulletin_fetches: int | None = 30,
     concurrency: int = 4,
 ) -> dict[str, int]:
@@ -456,6 +552,8 @@ async def enrich_guidance(
             return url, bulletin
 
     records = dict(await asyncio.gather(*(fetch_one(url) for url in selected_urls)))
+    if bulletins:
+        attach_bulletin_remediation(bulletins, records)
     for f in ranked:
         attach_guidance(f, records.get(f.ibm_bulletin_url or "", {}))
 

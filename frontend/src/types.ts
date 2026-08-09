@@ -44,6 +44,9 @@ export interface Bulletin {
   last_modified?: string | null;
   cve_ids: string[];
   applicability: BulletinApplicability[];
+  unassociated_individual_ptfs: string[];
+  unassociated_group_ptfs: string[];
+  unassociated_apars: string[];
   affected_source_text: string;
 }
 
