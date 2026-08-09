@@ -1,1 +1,1 @@
-"""Power System Vulnerability Curator — backend."""
+"""IBM i Vulnerability Curator — backend."""

@@ -12,12 +12,12 @@ def test_ibm_i_java_is_supply_chain():
     assert classify_risk_surface(f) in {"supply_chain", "mixed"}
 
 
-def test_aix_native_is_platform():
+def test_ibm_i_native_is_platform():
     f = Finding(
         cve_id="CVE-2099-1002",
-        title="AIX kernel privilege issue",
-        description="Privilege escalation in IBM AIX kernel subsystem.",
-        platforms=[PlatformHit(platform=Platform.AIX, match_strength="cpe")],
+        title="IBM i LIC privilege issue",
+        description="Privilege escalation in an IBM i operating-system component.",
+        platforms=[PlatformHit(platform=Platform.IBM_I, match_strength="cpe")],
     )
     assert classify_risk_surface(f) == "platform"
 
@@ -42,7 +42,7 @@ def test_action_lane_contain_without_package():
         title="No package",
         description="Wait for PTF",
         bucket=Bucket.URGENT,
-        platforms=[PlatformHit(platform=Platform.AIX)],
+        platforms=[PlatformHit(platform=Platform.IBM_I)],
         resolution_steps=[
             {
                 "title": "No packaged fix resolved yet",
@@ -52,6 +52,23 @@ def test_action_lane_contain_without_package():
         ],
         interim_mitigations=[
             {"title": "Reduce exposure", "detail": "ACL", "kind": "interim"}
+        ],
+    )
+    assert assign_action_lane(f) == "contain"
+
+
+def test_bulletin_link_alone_is_not_a_packaged_fix():
+    f = Finding(
+        cve_id="CVE-2099-1005",
+        title="Bulletin only",
+        description="The vendor URL exists, but no fix identifier was extracted.",
+        bucket=Bucket.WATCH,
+        platforms=[PlatformHit(platform=Platform.IBM_I)],
+        resolution_steps=[
+            {"title": "IBM Security Bulletin", "detail": "Source", "kind": "bulletin"}
+        ],
+        interim_mitigations=[
+            {"title": "Constrain exposure", "detail": "ACL", "kind": "interim"}
         ],
     )
     assert assign_action_lane(f) == "contain"

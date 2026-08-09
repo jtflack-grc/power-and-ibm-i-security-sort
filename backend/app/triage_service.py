@@ -13,6 +13,7 @@ import httpx
 from app.collectors.cache import DiskCache
 from app.collectors.epss import fetch_epss_for_cves
 from app.collectors.ibm_bulletins import enrich_ibm_bulletins
+from app.collectors.ibm_psirt import collect_ibmi_psirt, enrich_psirt_from_nvd
 from app.collectors.kev import fetch_kev_index, ransomware_flag
 from app.collectors.nvd import collect_platform_cves, count_nvd_queries, has_nvd_api_key
 from app.models import ProgressEvent, TriageResult
@@ -57,6 +58,24 @@ def load_last_live() -> TriageResult | None:
         return result
     except (OSError, ValueError, json.JSONDecodeError):
         return None
+
+
+def _curation_order(result_findings: list[Any]) -> list[Any]:
+    """Lead with new disclosures; retain risk score as the within-day tie-breaker."""
+    def published_value(finding: Any) -> float:
+        try:
+            return datetime.fromisoformat(str(finding.published).replace("Z", "+00:00")).timestamp()
+        except (TypeError, ValueError):
+            return 0.0
+
+    return sorted(
+        result_findings,
+        key=lambda finding: (
+            -published_value(finding),
+            0 if finding.on_kev else 1,
+            -(finding.score or 0),
+        ),
+    )
 
 
 class TriageJobStore:
@@ -167,6 +186,7 @@ async def build_live_result(
     on_progress: ProgressCb | None = None,
     check_cancelled: Callable[[], bool] | None = None,
     extra_notes: list[str] | None = None,
+    max_bulletin_fetches: int | None = 30,
 ) -> TriageResult:
     """Pull public feeds and return a ranked TriageResult (no job store / SSE)."""
     progress = on_progress or _noop_progress
@@ -180,7 +200,7 @@ async def build_live_result(
             raise TriageCancelled()
         await progress(stage, message, pct, detail)
 
-    await progress_checked("init", "Opening live feeds…", 2)
+    await progress_checked("init", "Opening IBM PSIRT and enrichment feeds…", 2)
     mode = "full" if has_nvd_api_key() else "slim"
     budget = count_nvd_queries()
     await progress_checked(
@@ -193,6 +213,35 @@ async def build_live_result(
     feed_health: list[dict[str, Any]] = []
     notes: list[str] = list(extra_notes or [])
     async with httpx.AsyncClient() as client:
+        await progress_checked("ibm", "Discovering IBM i bulletins from IBM PSIRT…", 5)
+        psirt_findings: dict[str, Any] = {}
+        psirt_ok = False
+        try:
+            psirt_findings = await collect_ibmi_psirt(client, cache)
+            psirt_ok = bool(psirt_findings)
+            feed_health.append(
+                {
+                    "id": "ibm",
+                    "label": "IBM PSIRT",
+                    "status": "ok" if psirt_ok else "empty",
+                    "detail": f"{len(psirt_findings)} IBM i CVEs discovered",
+                }
+            )
+            if not psirt_ok:
+                notes.append("IBM PSIRT returned no IBM i CVEs; NVD fallback is shown as degraded discovery.")
+        except Exception as psirt_exc:  # noqa: BLE001
+            feed_health.append(
+                {
+                    "id": "ibm",
+                    "label": "IBM PSIRT",
+                    "status": "degraded",
+                    "detail": str(psirt_exc)[:180],
+                }
+            )
+            notes.append(
+                "IBM PSIRT discovery was unavailable; this run uses the narrower NVD fallback."
+            )
+
         await progress_checked("kev", "Pulling CISA Known Exploited Vulnerabilities catalog…", 8)
         try:
             kev = await fetch_kev_index(client, cache)
@@ -249,23 +298,31 @@ async def build_live_result(
             findings_map = await collect_platform_cves(
                 client, cache, days_back=400, on_progress=nvd_cb
             )
-            findings = list(findings_map.values())
+            if psirt_ok:
+                findings = list(enrich_psirt_from_nvd(psirt_findings, findings_map).values())
+            else:
+                findings = list(findings_map.values())
             feed_health.append(
                 {
                     "id": "nvd",
                     "label": "NVD CVE API",
                     "status": "ok" if findings else "empty",
-                    "detail": f"{len(findings)} unique CVEs",
+                    "detail": (
+                        f"enriched {sum(1 for cve in psirt_findings if cve in findings_map)}"
+                        f"/{len(psirt_findings)} PSIRT CVEs"
+                        if psirt_ok
+                        else f"{len(findings)} fallback CVEs"
+                    ),
                 }
             )
             if not findings:
                 notes.append(
-                    "NVD returned no Power-family CVEs in window — try sample mode or Refresh live later."
+                    "NVD returned no IBM i CVEs in the window — try sample mode or refresh later."
                 )
         except TriageCancelled:
             raise
         except Exception as nvd_exc:  # noqa: BLE001
-            findings = []
+            findings = list(psirt_findings.values()) if psirt_ok else []
             feed_health.append(
                 {
                     "id": "nvd",
@@ -274,10 +331,14 @@ async def build_live_result(
                     "detail": str(nvd_exc)[:180],
                 }
             )
-            notes.append(f"NVD failed: {nvd_exc}")
+            notes.append(
+                f"NVD enrichment failed: {nvd_exc}"
+                if psirt_ok
+                else f"NVD fallback failed: {nvd_exc}"
+            )
         await progress_checked(
             "nvd",
-            f"Merged {len(findings)} unique CVEs across Power platforms.",
+            f"Curated {len(findings)} IBM i CVEs from " + ("PSIRT." if psirt_ok else "NVD fallback."),
             55,
             {"unique_cves": len(findings)},
         )
@@ -326,29 +387,27 @@ async def build_live_result(
                 {"error": str(epss_exc)},
             )
 
-        await progress_checked("ibm", "Resolving IBM Security Bulletin confirmation…", 80)
+        await progress_checked("ibm", "Completing IBM Security Bulletin references…", 80)
         try:
             confirmed = await enrich_ibm_bulletins(client, cache, findings, max_lookups=40)
             from_nvd = sum(1 for f in findings if f.ibm_bulletin_status == "confirmed")
-            feed_health.append(
-                {
-                    "id": "ibm",
-                    "label": "IBM bulletins",
-                    "status": "ok",
-                    "detail": f"{from_nvd} confirmed ({confirmed} via search)",
-                }
-            )
+            feed_health.append({
+                "id": "ibm-references",
+                "label": "IBM bulletin references",
+                "status": "ok",
+                "detail": f"{from_nvd} confirmed ({confirmed} via fallback search)",
+            })
             await progress_checked(
                 "ibm",
-                f"IBM PSIRT confirmation on {confirmed} findings (plus NVD reference hits).",
+                f"IBM bulletin references confirmed for {from_nvd} findings.",
                 88,
                 {"newly_confirmed": confirmed},
             )
         except Exception as ibm_exc:  # noqa: BLE001
             feed_health.append(
                 {
-                    "id": "ibm",
-                    "label": "IBM bulletins",
+                    "id": "ibm-references",
+                    "label": "IBM bulletin references",
                     "status": "degraded",
                     "detail": str(ibm_exc)[:180],
                 }
@@ -368,14 +427,36 @@ async def build_live_result(
             96,
         )
         try:
-            await enrich_guidance(client, cache, ranked, max_bulletin_fetches=30)
+            guidance_stats = await enrich_guidance(
+                client,
+                cache,
+                ranked,
+                max_bulletin_fetches=max_bulletin_fetches,
+            )
+            loaded = guidance_stats["loaded"]
+            attempted = guidance_stats["attempted"]
+            packaged = (
+                guidance_stats["individual_ptf"]
+                + guidance_stats["group_ptf"]
+                + guidance_stats["apar"]
+            )
             feed_health.append(
                 {
                     "id": "guidance",
                     "label": "Resolve / Interim",
-                    "status": "ok",
-                    "detail": "built",
+                    "status": "ok" if loaded == attempted else "degraded",
+                    "detail": (
+                        f"{loaded}/{attempted} bulletin bodies · {packaged} packaged paths "
+                        f"({guidance_stats['individual_ptf']} PTF, "
+                        f"{guidance_stats['group_ptf']} group, {guidance_stats['apar']} APAR)"
+                    ),
                 }
+            )
+            await progress_checked(
+                "guidance",
+                f"Read {loaded}/{attempted} bulletin bodies; extracted {packaged} packaged paths.",
+                98,
+                guidance_stats,
             )
         except Exception as guide_exc:  # noqa: BLE001
             from app.scoring.guidance import attach_guidance
@@ -392,6 +473,7 @@ async def build_live_result(
             )
             notes.append("Bulletin scrape degraded — Fix Central / search steps still attached.")
         annotate_surfaces(ranked)
+        ranked = _curation_order(ranked)
         metrics = build_metrics(ranked)
         result = TriageResult(
             job_id=job_id,
@@ -404,7 +486,8 @@ async def build_live_result(
             sources=[
                 "CISA KEV",
                 "FIRST EPSS",
-                "NVD CVE API 2.0",
+                "IBM Product Security Central / PSIRT",
+                "NVD CVE API 2.0 (enrichment)",
                 "OWASP Top 10 (2021) via CWE",
                 "IBM Security Bulletins",
             ],

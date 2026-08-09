@@ -11,6 +11,7 @@ All scraped/external text is sanitized before storage or display.
 
 from __future__ import annotations
 
+import asyncio
 import re
 from typing import Any
 from urllib.parse import urlparse
@@ -21,26 +22,53 @@ from bs4 import BeautifulSoup
 from app.collectors.cache import DiskCache
 from app.models import Finding, Platform
 
-# IBM i PTFs (SI/MF/UJ/UI/SE), AIX APARs (IJ/IV/IX), z/OS (UA/UJ) — best-effort scrape.
+# IBM i PTF/APAR identifiers — best-effort extraction from public IBM bulletins.
 PTF_TOKEN_RE = re.compile(
-    r"\b(?:SI|MF|UJ|UI|SE|UA|UB|UC)\d{4,7}\b",
+    r"\b(?:SI|SJ|MF|MJ|UJ|UI|SE|UA|UB|UC)\d{4,7}\b",
     re.IGNORECASE,
 )
+GROUP_PTF_TOKEN_RE = re.compile(r"\bSF\d{5}\b", re.IGNORECASE)
 APAR_RE = re.compile(
     r"\b(?:APAR|apar)\s*[:=]?\s*([A-Z]{2}\d{5,7})\b|\b(?:IJ|IV|IX|PH|OA)\d{5,7}\b",
     re.IGNORECASE,
 )
 FIX_LINE_RE = re.compile(
-    r"(?i)(apply|install|upgrade|update|remediat|fix|patch|ptf|apar|fileset).{0,160}"
-)
-FILESET_RE = re.compile(
-    r"\b(?:bos|devices|rsct|xlsmp|perl|openssl|openssh)\.[A-Za-z0-9._-]{2,40}\b"
+    r"(?i)(apply|install|upgrade|update|remediat|fix|patch|ptf|apar).{0,160}"
 )
 
 
 def _sanitize(text: str, limit: int = 500) -> str:
     cleaned = " ".join("".join(ch for ch in text if ord(ch) >= 32).split())
     return cleaned[: limit - 1] + "…" if len(cleaned) > limit else cleaned
+
+
+def _hydrate_fix_tokens(record: dict[str, Any]) -> dict[str, Any]:
+    """Recover identifiers from trusted cached summaries as parser rules evolve."""
+    blob = " ".join(
+        [
+            str(record.get("summary") or ""),
+            str(record.get("affected") or ""),
+            *[str(value) for value in record.get("fix_snippets") or []],
+        ]
+    )
+    record["ptfs"] = sorted(
+        {str(value).upper() for value in record.get("ptfs") or []}
+        | {value.upper() for value in PTF_TOKEN_RE.findall(blob)}
+    )[:20]
+    record["ptf_groups"] = sorted(
+        {str(value).upper() for value in record.get("ptf_groups") or []}
+        | {value.upper() for value in GROUP_PTF_TOKEN_RE.findall(blob)}
+    )[:20]
+    if "body_loaded" not in record:
+        record["body_loaded"] = bool(
+            record.get("summary")
+            or record.get("affected")
+            or record.get("fix_snippets")
+            or record.get("ptfs")
+            or record.get("ptf_groups")
+            or record.get("apars")
+        )
+    return record
 
 
 def _is_allowed_bulletin_fetch(url: str) -> bool:
@@ -106,32 +134,6 @@ def _platform_interims(finding: Finding) -> list[dict[str, str]]:
                 "restrict service listeners that still offer legacy TLS.",
             )
 
-    if Platform.AIX in plats:
-        add(
-            "Check Advisory / APAR currency",
-            "Map the CVE to the latest IBM AIX security advisory and confirm "
-            "emgr / instfix output reflects the listed APAR/fileset level.",
-        )
-        add(
-            "Reduce remote service exposure",
-            "Limit inetd/sshd/rservices listeners and management networks until "
-            "the fix package is staged.",
-        )
-
-    if Platform.LINUX_ON_POWER in plats:
-        add(
-            "Vendor package channel",
-            "Prefer distro or PowerSC/PowerVM advisory packages over ad-hoc rebuilds; "
-            "confirm architecture (ppc64le) packages specifically.",
-        )
-
-    if Platform.ZOS in plats:
-        add(
-            "Apply Holddata / ++APAR discipline",
-            "Route through SMP/E HOLDDATA review and staged APPLY CHECK before "
-            "production APPLY/ACCEPT of the remediating PTF.",
-        )
-
     if finding.on_kev and finding.kev_required_action:
         add(
             "CISA required action",
@@ -178,15 +180,16 @@ async def scrape_bulletin_fixes(
     cache_key = f"bulletin_fixes:{url}"
     cached = cache.get(cache_key)
     if cached is not None:
-        return cached
+        return _hydrate_fix_tokens(cached)
 
     record: dict[str, Any] = {
         "ptfs": [],
+        "ptf_groups": [],
         "apars": [],
-        "filesets": [],
         "fix_snippets": [],
         "summary": None,
         "affected": None,
+        "body_loaded": False,
     }
     if not _is_allowed_bulletin_fetch(url):
         cache.set(cache_key, record)
@@ -197,7 +200,7 @@ async def scrape_bulletin_fixes(
             timeout=25.0,
             follow_redirects=True,
             headers={
-                "User-Agent": "PowerSystemVulnerabilityCurator/1.0 (portfolio-demo)"
+                "User-Agent": "IBMiVulnerabilityCurator/1.0 (portfolio-demo)"
             },
         )
         # Reject SSRF via open redirect off ibm.com
@@ -209,6 +212,9 @@ async def scrape_bulletin_fixes(
             return record
         soup = BeautifulSoup(resp.text, "lxml")
         text = _sanitize(soup.get_text(" ", strip=True), limit=20000)
+        if "site unavailable" in text.lower() or len(text) < 240:
+            return record
+        record["body_loaded"] = True
         # Prefer table cells — IBM bulletins often list PTFs in remediation tables
         table_blob = " ".join(
             td.get_text(" ", strip=True)
@@ -216,14 +222,15 @@ async def scrape_bulletin_fixes(
         )
         search_blob = f"{table_blob} {text}"
         record["ptfs"] = sorted({p.upper() for p in PTF_TOKEN_RE.findall(search_blob)})[:20]
+        record["ptf_groups"] = sorted(
+            {p.upper() for p in GROUP_PTF_TOKEN_RE.findall(search_blob)}
+        )[:20]
         apars: list[str] = []
         for match in APAR_RE.finditer(search_blob):
             token = match.group(1) if match.lastindex else match.group(0)
             if token:
                 apars.append(token.upper())
         record["apars"] = sorted(set(apars))[:20]
-        filesets = FILESET_RE.findall(search_blob)
-        record["filesets"] = sorted({f.lower() for f in filesets})[:12]
         snippets: list[str] = []
         for m in FIX_LINE_RE.finditer(text):
             snip = _sanitize(m.group(0), 220)
@@ -270,6 +277,7 @@ async def scrape_bulletin_fixes(
     except httpx.HTTPError:
         pass
 
+    record = _hydrate_fix_tokens(record)
     cache.set(cache_key, record)
     return record
 
@@ -282,7 +290,7 @@ def _fix_central_links(finding: Finding) -> list[dict[str, str]]:
             "title": "Search IBM Support for this CVE",
             "detail": (
                 "Open IBM’s support search with the CVE preloaded. Confirm bulletin "
-                "scope against your release / TR / fileset before scheduling change."
+                "scope against your IBM i release, product, and technology refresh before scheduling change."
             ),
             "kind": "search",
             "url": f"https://www.ibm.com/support/pages/search?q={cve}",
@@ -305,28 +313,6 @@ def _fix_central_links(finding: Finding) -> list[dict[str, str]]:
                 "detail": (
                     "After apply: confirm PTF level with DSPPTF / GO PTF and that the "
                     "partition matches the bulletin’s affected product table (release + product)."
-                ),
-                "kind": "verify",
-            }
-        )
-    if Platform.AIX in plats:
-        steps.append(
-            {
-                "title": "Verify on AIX (systems check)",
-                "detail": (
-                    "After apply: instfix -l / emgr -l and match fileset + APAR level to "
-                    "the advisory before closing the change."
-                ),
-                "kind": "verify",
-            }
-        )
-    if Platform.ZOS in plats:
-        steps.append(
-            {
-                "title": "Verify on z/OS (systems check)",
-                "detail": (
-                    "After APPLY: review SMP/E CSI for the PTF, confirm HOLDDATA cleared, "
-                    "and retain APPLY CHECK evidence for audit."
                 ),
                 "kind": "verify",
             }
@@ -387,19 +373,22 @@ def attach_guidance(finding: Finding, bulletin: dict[str, Any] | None = None) ->
                 "kind": "ptf",
             }
         )
+    for group in bulletin.get("ptf_groups") or []:
+        resolution_steps.append(
+            {
+                "title": f"PTF group {group}",
+                "detail": (
+                    "IBM remediation names this group PTF. Verify its installed level "
+                    "with WRKPTFGRP; do not treat the group identifier as an individual DSPPTF selection."
+                ),
+                "kind": "ptf_group",
+            }
+        )
     for apar in bulletin.get("apars") or []:
         resolution_steps.append(
             {
                 "title": f"APAR {apar}",
                 "detail": "APAR referenced in bulletin / advisory text.",
-                "kind": "apar",
-            }
-        )
-    for fs in bulletin.get("filesets") or []:
-        resolution_steps.append(
-            {
-                "title": f"Fileset {fs}",
-                "detail": "AIX/Power fileset token extracted from bulletin text — confirm level on the box.",
                 "kind": "apar",
             }
         )
@@ -448,20 +437,40 @@ async def enrich_guidance(
     client: httpx.AsyncClient,
     cache: DiskCache,
     findings: list[Finding],
-    max_bulletin_fetches: int = 30,
-) -> None:
-    """Populate remediation fields; fetch bulletin HTML for top findings first."""
+    max_bulletin_fetches: int | None = 30,
+    concurrency: int = 4,
+) -> dict[str, int]:
+    """Populate remediation fields and report honest bulletin-body coverage."""
     ranked = sorted(
         findings,
         key=lambda f: (0 if f.on_kev else 1, 0 if f.bucket.value == "urgent" else 1, -(f.score or 0)),
     )
-    fetched = 0
+    candidates = [f for f in ranked if f.ibm_bulletin_url]
+    selected = candidates if max_bulletin_fetches is None else candidates[:max_bulletin_fetches]
+    selected_urls = list(dict.fromkeys(f.ibm_bulletin_url for f in selected if f.ibm_bulletin_url))
+    semaphore = asyncio.Semaphore(max(1, min(concurrency, 8)))
+
+    async def fetch_one(url: str) -> tuple[str, dict[str, Any]]:
+        async with semaphore:
+            bulletin = await scrape_bulletin_fixes(client, cache, url)
+            return url, bulletin
+
+    records = dict(await asyncio.gather(*(fetch_one(url) for url in selected_urls)))
     for f in ranked:
-        bulletin: dict[str, Any] = {}
-        if (
-            f.ibm_bulletin_url
-            and fetched < max_bulletin_fetches
-        ):
-            bulletin = await scrape_bulletin_fixes(client, cache, f.ibm_bulletin_url)
-            fetched += 1
-        attach_guidance(f, bulletin)
+        attach_guidance(f, records.get(f.ibm_bulletin_url or "", {}))
+
+    return {
+        "linked": len(candidates),
+        "unique_linked": len({f.ibm_bulletin_url for f in candidates}),
+        "attempted": len(selected_urls),
+        "loaded": sum(1 for record in records.values() if record.get("body_loaded")),
+        "individual_ptf": sum(
+            1 for f in ranked if any(str(s.get("kind")) == "ptf" for s in f.resolution_steps)
+        ),
+        "group_ptf": sum(
+            1 for f in ranked if any(str(s.get("kind")) == "ptf_group" for s in f.resolution_steps)
+        ),
+        "apar": sum(
+            1 for f in ranked if any(str(s.get("kind")) == "apar" for s in f.resolution_steps)
+        ),
+    }

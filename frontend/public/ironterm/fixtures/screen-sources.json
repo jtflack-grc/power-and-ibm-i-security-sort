@@ -1,0 +1,234 @@
+{
+  "schemaVersion": 1,
+  "reviewedAt": "2026-08-09",
+  "scope": "IBM i PTF verification screens for transport-free IronTerm scenarios",
+  "sourcePolicy": {
+    "tierA": "IBM documentation, IBM Support technote, IBM Redbook, or clean IBM i capture",
+    "tierB": "Legacy Control Lab implementation already accepted as a synthetic training screen",
+    "releaseRule": "A fixture may not be enabled until labels, options, columns, status vocabulary, function keys, and navigation are supported by Tier A evidence and reviewed by John Flack.",
+    "dataRule": "System names, PTF identifiers, products, releases, dates, group levels, and descriptions in shipped fixtures must be synthetic or public IBM examples."
+  },
+  "legacyControlLab": {
+    "repository": "https://github.com/jtflack-grc/legacy-control-lab",
+    "commit": "41c69dd93f865e032ea4f956cc0899139eedcaa6",
+    "role": "Structural starting point only; LCL screens do not bypass Tier A validation."
+  },
+  "screens": [
+    {
+      "id": "WRKPTFGRP",
+      "title": "Work with PTF Groups",
+      "fixtureStatus": "candidate",
+      "flowRole": "Group-level currency and installed-status verification",
+      "lclAssessment": "Reuse the LCL screen structure and subfile routing, then correct its option legend, group-level presentation, conditional keys, and release examples against IBM evidence.",
+      "confirmedBehavior": [
+        "Displays PTF groups on the system",
+        "Supports PTFGRP(*ALL) and PTFGRPLVL(*INSTALLED|*LATEST|*ALL|1-99999)",
+        "Shows group status, group level, and target release",
+        "Option 5 displays a selected PTF group",
+        "Option 8 displays special-handling PTFs for the cumulative group",
+        "Option 4 deletes group information without deleting constituent PTFs",
+        "Multiple stored levels may appear",
+        "F6 prints the group report"
+      ],
+      "sources": [
+        {
+          "tier": "A",
+          "title": "IBM i 7.4 — Work with PTF Groups command",
+          "url": "https://www.ibm.com/docs/en/i/7.4.0?topic=w-work-program-temporary-fix-groups",
+          "supports": ["command purpose", "parameters", "group level semantics", "authority"]
+        },
+        {
+          "tier": "A",
+          "title": "IBM i 7.4 — Fix groups",
+          "url": "https://www.ibm.com/docs/en/i/7.4.0?topic=fixes-groups",
+          "supports": ["status resolution", "target release", "cumulative group naming", "level semantics"]
+        },
+        {
+          "tier": "A",
+          "title": "IBM Support — Changing Number of Levels Shown in WRKPTFGRP",
+          "url": "https://www.ibm.com/support/pages/changing-number-levels-shown-wrkptfgrp",
+          "supports": ["IBM-hosted screen images", "multiple-level presentation"]
+        },
+        {
+          "tier": "A",
+          "title": "IBM Support — Reasons Why Groups in WRKPTFGRP May Show as Not Installed",
+          "url": "https://www.ibm.com/support/pages/reasons-why-groups-wrkptfgrp-may-show-not-installed",
+          "supports": ["option 5", "conditional F19", "not-installed reasons", "F6 print"]
+        },
+        {
+          "tier": "A",
+          "title": "IBM Support — Guide to fixes FAQs",
+          "url": "https://www.ibm.com/support/pages/guide-fixes-faqs",
+          "supports": ["SF99vrm naming", "cumulative group level interpretation"]
+        },
+        {
+          "tier": "B",
+          "title": "LCL WRKPTFGRP golden screen",
+          "url": "https://github.com/jtflack-grc/legacy-control-lab/blob/41c69dd93f865e032ea4f956cc0899139eedcaa6/data/screen-specs/golden/wrkptfgrp.golden.json",
+          "supports": ["24x80 candidate layout", "subfile fields", "command line", "synthetic training values"]
+        },
+        {
+          "tier": "B",
+          "title": "LCL WRKPTFGRP runtime screen",
+          "url": "https://github.com/jtflack-grc/legacy-control-lab/blob/41c69dd93f865e032ea4f956cc0899139eedcaa6/src/screen-runtime/screens/workPtfGroups.ts",
+          "supports": ["field coordinates", "input option field", "paging behavior"]
+        }
+      ],
+      "remainingGate": "Capture the three IBM-hosted WRKPTFGRP images at original resolution and compare row/column placement and full option legend with LCL."
+    },
+    {
+      "id": "DSPPTFGRP",
+      "title": "Display PTF Group",
+      "fixtureStatus": "candidate",
+      "flowRole": "Drill from group status to constituent PTF status",
+      "lclAssessment": "Reuse LCL's subfile structure, but add IBM's conditional F19 behavior and validate the exact header, fields, columns, and function-key line.",
+      "confirmedBehavior": [
+        "Reached with option 5 from WRKPTFGRP",
+        "Lists constituent PTF identifiers and statuses",
+        "F19 filters to PTFs that prevent a group from reaching Installed status",
+        "F19 is available only when the selected group is Not installed",
+        "F6 prints the displayed group details"
+      ],
+      "sources": [
+        {
+          "tier": "A",
+          "title": "IBM i 7.4 — Display PTF Group command",
+          "url": "https://www.ibm.com/docs/en/i/7.4.0?topic=commands-display-ptf-group-dspptfgrp",
+          "supports": ["command identity", "group-detail behavior"]
+        },
+        {
+          "tier": "A",
+          "title": "IBM Support — Reasons Why Groups in WRKPTFGRP May Show as Not Installed",
+          "url": "https://www.ibm.com/support/pages/reasons-why-groups-wrkptfgrp-may-show-not-installed",
+          "supports": ["option 5 navigation", "F19 conditional filter", "F6 print"]
+        },
+        {
+          "tier": "B",
+          "title": "LCL DSPPTFGRP golden screen",
+          "url": "https://github.com/jtflack-grc/legacy-control-lab/blob/41c69dd93f865e032ea4f956cc0899139eedcaa6/data/screen-specs/golden/dspptfgrp.golden.json",
+          "supports": ["24x80 candidate layout", "group drilldown", "option field"]
+        },
+        {
+          "tier": "B",
+          "title": "LCL DSPPTFGRP runtime screen",
+          "url": "https://github.com/jtflack-grc/legacy-control-lab/blob/41c69dd93f865e032ea4f956cc0899139eedcaa6/src/screen-runtime/screens/displayPtfGroup.ts",
+          "supports": ["field coordinates", "subfile rows", "paging behavior"]
+        }
+      ],
+      "remainingGate": "Obtain an IBM-hosted or clean IBM i capture showing the complete DSPPTFGRP panel and both Installed and Not installed function-key states."
+    },
+    {
+      "id": "DSPPTF_STATUS",
+      "title": "Display PTF Status",
+      "fixtureStatus": "enabled",
+      "flowRole": "Verify the individual PTF's current loaded/applied state and next-IPL action",
+      "lclAssessment": "This screen is missing as a distinct LCL panel and must be added before reusing LCL's detail screen.",
+      "confirmedBehavior": [
+        "Displays Product ID, IPL source, and release of base option",
+        "Option 5 displays PTF details",
+        "Option 6 prints the cover letter",
+        "Option 8 displays the cover letter",
+        "Columns include option, PTF ID, Status, and IPL Action",
+        "F11 displays an alternate view",
+        "F17 positions to a PTF",
+        "Statuses include Not applied, Temporarily applied, Permanently applied, and Superseded"
+      ],
+      "sources": [
+        {
+          "tier": "A",
+          "title": "IBM Support — SRCB181301F after PTF Apply Standalone/In-Band",
+          "url": "https://www.ibm.com/support/pages/srcb181301f-after-ptf-apply-standalonein-band",
+          "supports": ["complete preformatted 5250 panel", "option legend", "columns", "status values", "F-key line"]
+        },
+        {
+          "tier": "A",
+          "title": "IBM Support — Unmarking PTFs from Applying at IPL Time",
+          "url": "https://www.ibm.com/support/pages/unmarking-ptfs-applying-ipl-time",
+          "supports": ["complete status rows", "IPL Action column", "none state"]
+        },
+        {
+          "tier": "A",
+          "title": "IBM i 7.4 — Fix status descriptions",
+          "url": "https://www.ibm.com/docs/en/i/7.4.0?topic=information-status-descriptions-using-command-interface",
+          "supports": ["canonical status vocabulary", "PND and ACN semantics", "superseded interpretation"]
+        },
+        {
+          "tier": "A",
+          "title": "IBM i 7.4 — Displaying level of fixes",
+          "url": "https://www.ibm.com/docs/en/i/7.4.0?topic=system-displaying-level-fixes",
+          "supports": ["5770SS1 and 5770999 command paths", "cumulative package identifiers"]
+        }
+      ],
+      "validation": "Implemented as a bounded CP037 WTD fixture and verified through IronTerm's parser as a 24x80 matrix with seven input fields and a host-style PF disable mask.",
+      "remainingGate": "John visual acceptance review; source the destination layouts before enabling F11, F17, or option-5 navigation."
+    },
+    {
+      "id": "DSPPTF_DETAILS_MENU",
+      "title": "Display PTF Details",
+      "fixtureStatus": "content_ready_layout_pending",
+      "flowRole": "Select the detail category for a PTF",
+      "lclAssessment": "LCL currently skips this menu and goes directly to a flattened general-information panel. Do not reuse that navigation unchanged.",
+      "confirmedBehavior": [
+        "Reached with option 5 from Display PTF Status",
+        "Option 1 selects General information",
+        "The menu provides access to cover-letter and instruction information"
+      ],
+      "sources": [
+        {
+          "tier": "A",
+          "title": "IBM Support — Basic PTF Tutorial for applying Individual PTFs",
+          "url": "https://www.ibm.com/support/pages/basic-ptf-tutorial-applying-individual-ptfs",
+          "supports": ["navigation sequence", "option 1", "information categories"]
+        }
+      ],
+      "remainingGate": "Obtain an IBM-hosted or clean IBM i capture of the complete menu before authoring the screen fixture."
+    },
+    {
+      "id": "DSPPTF_GENERAL_INFORMATION",
+      "title": "General Information",
+      "fixtureStatus": "content_ready_layout_pending",
+      "flowRole": "Inspect status, pending action, supersession, release, product, and activation evidence",
+      "lclAssessment": "Reuse LCL's detailed data model and dotted-label style, but retitle/restructure it as the General Information panel reached from the details menu. Do not retain the synthetic 'Display PTF Details' flattening.",
+      "confirmedBehavior": [
+        "Includes product ID and PTF ID",
+        "Includes release, on-order state, save-file state, PTF status, latest superseding PTF, and status date/time",
+        "Includes unattended IPL action, optional part, PTF library, cover-letter and mandatory-instruction indicators",
+        "Includes action pending, action required, target release, minimum and maximum levels, creation date/time, and technology refresh PTF",
+        "PTF library and optional part use IBM dotted-label presentation"
+      ],
+      "sources": [
+        {
+          "tier": "A",
+          "title": "IBM Support — Basic PTF Tutorial for applying Individual PTFs",
+          "url": "https://www.ibm.com/support/pages/basic-ptf-tutorial-applying-individual-ptfs",
+          "supports": ["complete field inventory", "navigation", "activation interpretation"]
+        },
+        {
+          "tier": "A",
+          "title": "IBM Support — What PTF is for What release of Java?",
+          "url": "https://www.ibm.com/support/pages/what-ptf-what-release-java",
+          "supports": ["exact dotted labels for Optional part and PTF library"]
+        },
+        {
+          "tier": "A",
+          "title": "IBM i 7.4 — PTF_INFO view",
+          "url": "https://www.ibm.com/docs/en/i/7.4.0?topic=services-ptf-info-view",
+          "supports": ["canonical data fields", "loaded status", "IPL action", "pending action", "superseding PTF semantics"]
+        },
+        {
+          "tier": "B",
+          "title": "LCL DSPPTF golden screen",
+          "url": "https://github.com/jtflack-grc/legacy-control-lab/blob/41c69dd93f865e032ea4f956cc0899139eedcaa6/data/screen-specs/golden/dspptf.golden.json",
+          "supports": ["candidate dotted-label layout", "synthetic evidence values"]
+        },
+        {
+          "tier": "B",
+          "title": "LCL DSPPTF detail runtime",
+          "url": "https://github.com/jtflack-grc/legacy-control-lab/blob/41c69dd93f865e032ea4f956cc0899139eedcaa6/src/screen-runtime/screens/displayPtfDetail.ts",
+          "supports": ["detailed data model", "candidate row placement", "cover-letter wrapping"]
+        }
+      ],
+      "remainingGate": "Obtain a full General Information screen capture and resolve which fields require multiple pages or alternate views at 24x80."
+    }
+  ]
+}

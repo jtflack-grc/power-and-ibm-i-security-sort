@@ -1,27 +1,20 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ActionLane } from "./ActionLanesFlow";
-import type { Bucket, Finding, Platform } from "../types";
+import type { Bucket, Finding } from "../types";
 import { PLATFORM_LABELS } from "../types";
+import { hasIndividualPtfEvidence } from "../ptfEvidence";
 
 interface Props {
   findings: Finding[];
   selectedId: string | null;
   onSelect: (f: Finding) => void;
-  platformFilter: Platform | "all";
-  onPlatformFilter: (p: Platform | "all") => void;
   laneFilter: ActionLane | "all";
   onLaneFilter: (lane: ActionLane | "all") => void;
   pasteHitIds?: string[];
 }
 
 const BUCKETS: Array<Bucket | "all"> = ["all", "urgent", "watch", "low"];
-const PLATFORMS: Array<Platform | "all"> = [
-  "all",
-  "ibm_i",
-  "aix",
-  "zos",
-  "linux_on_power",
-];
+const LANES: Array<ActionLane | "all"> = ["all", "apply", "contain", "monitor"];
 const FOCUS_LIMIT = 40;
 /** Match backend RankerConfig.ancient_days (~7y). */
 const MUSEUM_AGE_DAYS = 2555;
@@ -45,12 +38,14 @@ export function isMuseumFinding(f: Finding): boolean {
   return ageDays >= MUSEUM_AGE_DAYS;
 }
 
+function hasPtfEvidence(f: Finding): boolean {
+  return hasIndividualPtfEvidence(f);
+}
+
 export function FindingsPanel({
   findings,
   selectedId,
   onSelect,
-  platformFilter,
-  onPlatformFilter,
   laneFilter,
   onLaneFilter,
   pasteHitIds = [],
@@ -58,18 +53,14 @@ export function FindingsPanel({
   const [bucket, setBucket] = useState<Bucket | "all">("all");
   const [includeOlder, setIncludeOlder] = useState(false);
   const [showAll, setShowAll] = useState(false);
+  const [ptfOnly, setPtfOnly] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
   const skipAutoScroll = useRef(true);
 
   const filtered = useMemo(() => {
     return findings.filter((f) => {
       if (bucket !== "all" && f.bucket !== bucket) return false;
-      if (
-        platformFilter !== "all" &&
-        !f.platforms.some((p) => p.platform === platformFilter)
-      ) {
-        return false;
-      }
+      if (ptfOnly && !hasPtfEvidence(f)) return false;
       if (laneFilter !== "all" && (f.action_lane ?? "monitor") !== laneFilter) {
         return false;
       }
@@ -81,7 +72,9 @@ export function FindingsPanel({
       }
       return true;
     });
-  }, [findings, bucket, platformFilter, laneFilter, includeOlder, selectedId, pasteHitIds]);
+  }, [findings, bucket, laneFilter, includeOlder, selectedId, pasteHitIds, ptfOnly]);
+
+  const ptfCount = useMemo(() => findings.filter(hasPtfEvidence).length, [findings]);
 
   const olderHidden = useMemo(() => {
     if (includeOlder) return 0;
@@ -90,22 +83,23 @@ export function FindingsPanel({
       if (selectedId === f.cve_id) return false;
       if (pasteHitIds.includes(f.cve_id)) return false;
       if (bucket !== "all" && f.bucket !== bucket) return false;
-      if (
-        platformFilter !== "all" &&
-        !f.platforms.some((p) => p.platform === platformFilter)
-      ) {
-        return false;
-      }
       if (laneFilter !== "all" && (f.action_lane ?? "monitor") !== laneFilter) {
         return false;
       }
       return true;
     }).length;
-  }, [findings, includeOlder, selectedId, pasteHitIds, bucket, platformFilter, laneFilter]);
+  }, [findings, includeOlder, selectedId, pasteHitIds, bucket, laneFilter]);
 
   const visible = useMemo(() => {
     if (showAll || filtered.length <= FOCUS_LIMIT) return filtered;
     const head = filtered.slice(0, FOCUS_LIMIT);
+    // A source-extracted PTF unlocks the verification rail, so retain those
+    // sparse rows in the focused queue even when rank places them below 40.
+    for (const finding of filtered) {
+      if (hasPtfEvidence(finding) && !head.some((f) => f.cve_id === finding.cve_id)) {
+        head.push(finding);
+      }
+    }
     if (selectedId && !head.some((f) => f.cve_id === selectedId)) {
       const selected = filtered.find((f) => f.cve_id === selectedId);
       if (selected) return [...head, selected];
@@ -122,7 +116,7 @@ export function FindingsPanel({
     root.scrollTo({ top: 0 });
     const pane = root.closest(".panel-body");
     if (pane instanceof HTMLElement) pane.scrollTo({ top: 0 });
-  }, [findings, platformFilter, bucket, laneFilter, includeOlder]);
+  }, [findings, bucket, laneFilter, includeOlder]);
 
   // Only scroll a row into view after deliberate keyboard moves (not auto-select on load).
   useEffect(() => {
@@ -167,22 +161,6 @@ export function FindingsPanel({
       }}
     >
       <div className="findings-filters">
-        <div className="filter-row-label">Platform</div>
-        {PLATFORMS.map((p) => (
-          <button
-            key={p}
-            type="button"
-            className={`chip chip-platform ${platformFilter === p ? "active" : ""}`}
-            onClick={() => onPlatformFilter(p)}
-          >
-            {p === "all" ? "All platforms" : PLATFORM_LABELS[p]}
-          </button>
-        ))}
-      </div>
-      {platformFilter === "all" && (
-        <div className="filter-hint">Start wide — chip a platform when you want the rail narrower.</div>
-      )}
-      <div className="findings-filters">
         <div className="filter-row-label">Priority</div>
         {BUCKETS.map((b) => (
           <button
@@ -194,19 +172,30 @@ export function FindingsPanel({
             {b}
           </button>
         ))}
-      </div>
-      {laneFilter !== "all" && (
-        <div className="findings-filters">
-          <div className="filter-row-label">Dock filter</div>
+        {ptfCount > 0 && (
           <button
             type="button"
-            className="chip active"
-            onClick={() => onLaneFilter("all")}
+            className={`chip ${ptfOnly ? "active" : ""}`}
+            onClick={() => setPtfOnly((value) => !value)}
+            title="Show findings with a PTF identifier extracted from IBM guidance"
           >
-            {laneFilter} ✕
+            PTF evidence ({ptfCount})
           </button>
-        </div>
-      )}
+        )}
+      </div>
+      <div className="findings-filters findings-filters-compact">
+        <div className="filter-row-label">Action</div>
+        {LANES.map((lane) => (
+          <button
+            key={lane}
+            type="button"
+            className={`chip ${laneFilter === lane ? "active" : ""}`}
+            onClick={() => onLaneFilter(lane)}
+          >
+            {lane}
+          </button>
+        ))}
+      </div>
       <div className="findings-focus-bar">
         <button
           type="button"
@@ -264,6 +253,7 @@ export function FindingsPanel({
               )}
               {supply && <span className="badge badge-supply">Supply chain</span>}
               {f.on_kev && <span className="badge kev">KEV</span>}
+              {hasPtfEvidence(f) && <span className="badge badge-ptf">PTF</span>}
               {pasteHitIds.includes(f.cve_id) && (
                 <span className="badge badge-paste">paste match</span>
               )}
@@ -277,7 +267,7 @@ export function FindingsPanel({
         );
       })}
       {filtered.length === 0 && (
-        <div className="empty-state">No findings in this platform / dock / priority cut.</div>
+        <div className="empty-state">No findings in this dock / priority cut.</div>
       )}
     </div>
   );

@@ -1,17 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
-import type { Finding, Platform, ProgressEvent, TriageResult } from "../types";
+import type { Finding, ProgressEvent, TriageResult } from "../types";
 import {
   findingMatchesPaste,
   type ShopContext,
 } from "../shopContext";
 import { FLAGSHIP_CVE, FlagshipWalkthrough } from "./FlagshipWalkthrough";
-import { ActionLanesFlow, type ActionLane } from "./ActionLanesFlow";
+import type { ActionLane } from "./ActionLanesFlow";
 import { FeedHealthStrip } from "./FeedHealthStrip";
 import { FindingsPanel } from "./FindingsPanel";
 import { IssueDetailPanel } from "./IssueDetailPanel";
 import { LiveFailCallout, LiveWaitCallout } from "./LiveStatusCallouts";
 import { LiveProgressBanner } from "./LiveProgressBanner";
+import { PtfCommandCoach } from "./PtfCommandCoach";
 import { ShopContextPanel } from "./ShopContextPanel";
+import { VerificationRail } from "./VerificationRail";
 
 type Pane = "findings" | "issue" | "flow";
 
@@ -34,8 +36,6 @@ interface Props {
   publishedAvailable: boolean;
   shop: ShopContext;
   onShopChange: (ctx: ShopContext) => void;
-  platformFilter: Platform | "all";
-  onPlatformFilter: (p: Platform | "all") => void;
   onStartIntake: () => void;
   onOpenCredits?: () => void;
   liveError?: string | null;
@@ -74,8 +74,6 @@ export function Layout({
   publishedAvailable,
   shop,
   onShopChange,
-  platformFilter,
-  onPlatformFilter,
   onStartIntake,
   onOpenCredits,
   liveError = null,
@@ -85,8 +83,9 @@ export function Layout({
   const [selected, setSelected] = useState<Finding | null>(null);
   const [laneFilter, setLaneFilter] = useState<ActionLane | "all">("all");
   const [showFlagship, setShowFlagship] = useState(true);
+  const [showFeedSources, setShowFeedSources] = useState(false);
 
-  const findings = result?.findings ?? [];
+  const findings = useMemo(() => result?.findings ?? [], [result?.findings]);
   const publishedStamp = formatStamp(result?.generated_at);
   const modeLabel =
     result?.mode === "live"
@@ -106,12 +105,7 @@ export function Layout({
     [findings, shop.paste]
   );
 
-  const scopedFindings = useMemo(() => {
-    if (platformFilter === "all") return findings;
-    return findings.filter((f) =>
-      f.platforms.some((p) => p.platform === platformFilter)
-    );
-  }, [findings, platformFilter]);
+  const scopedFindings = findings;
 
   useEffect(() => {
     if (!scopedFindings.length) {
@@ -151,9 +145,9 @@ export function Layout({
           rel="noreferrer"
         >
           <div className="brand-wordmark">
-            <span>Power & Z Vuln Curator</span>
+            <span>IBM i Vuln Curator</span>
           </div>
-          <div className="brand-sub">IBM Power & Z Vulnerability Curator · i on GRC</div>
+          <div className="brand-sub">IBM i Vulnerability Curator · i on GRC</div>
         </a>
         <div className="header-actions">
           <button type="button" className="button" onClick={onStartIntake}>
@@ -265,10 +259,10 @@ export function Layout({
               onChange={onShopChangeOnly}
               onStartIntake={onStartIntake}
             />
-            {shop.enabled && result && platformFilter === "all" && (
+            {shop.enabled && result && (
               <div className="route-cue" role="status">
-                Shop ranking is on · viewing <strong>All platforms</strong> — chip a baileywick
-                below to narrow the rail (IBM i, AIX, …). Ranking stays shop-weighted either way.
+                IBM i shop ranking is on. Exposure, privilege, change pressure, and pasted
+                PTF/APAR evidence are re-weighting this browser session only.
               </div>
             )}
             {liveRunning && !result && (
@@ -367,8 +361,6 @@ export function Layout({
               <FindingsPanel
                 findings={findings}
                 selectedId={selectedResolved?.cve_id ?? null}
-                platformFilter={platformFilter}
-                onPlatformFilter={onPlatformFilter}
                 laneFilter={laneFilter}
                 onLaneFilter={setLaneFilter}
                 onSelect={openFinding}
@@ -390,20 +382,24 @@ export function Layout({
 
         <section className={`panel ${pane !== "flow" ? "hidden-mobile" : ""}`}>
           <div className="panel-head">
-            <h2>Actions</h2>
-            <div className="meta">Work docks</div>
+            <h2>Evidence</h2>
+            <div className="panel-head-actions">
+              <span className="meta">IBM i command path</span>
+              {result && (
+                <button
+                  type="button"
+                  className="panel-source-button"
+                  aria-expanded={showFeedSources}
+                  onClick={() => setShowFeedSources((value) => !value)}
+                >
+                  Feed sources
+                </button>
+              )}
+            </div>
           </div>
           <div className="panel-body panel-body-docks">
-            <ActionLanesFlow
-              findings={scopedFindings}
-              selected={selectedResolved}
-              settling={sampleLoading || publishedLoading || liveRunning}
-              laneFilter={laneFilter}
-              onLaneFilter={setLaneFilter}
-              onSelect={openFinding}
-            />
-            {result && (
-              <div className="feed-aside-wrap">
+            {result && showFeedSources && (
+              <div className="feed-source-drawer">
                 <FeedHealthStrip
                   health={result.feed_health ?? []}
                   notes={result.notes}
@@ -412,6 +408,8 @@ export function Layout({
                 />
               </div>
             )}
+            <PtfCommandCoach finding={selectedResolved} />
+            <VerificationRail finding={selectedResolved} />
           </div>
         </section>
       </main>

@@ -19,7 +19,7 @@ import {
   saveShopContext,
   type ShopContext,
 } from "./shopContext";
-import type { Platform, ProgressEvent, TriageResult } from "./types";
+import type { ProgressEvent, TriageResult } from "./types";
 import "./index.css";
 
 export default function App() {
@@ -39,7 +39,6 @@ export default function App() {
   const [backendAvailable, setBackendAvailable] = useState(false);
   const [publishedAvailable, setPublishedAvailable] = useState(false);
   const [shop, setShop] = useState<ShopContext>(() => loadShopContext());
-  const [platformFilter, setPlatformFilter] = useState<Platform | "all">("all");
   const liveJobRef = useRef<string | null>(null);
   const stopLiveRef = useRef<(() => void) | null>(null);
   const rawResultRef = useRef<TriageResult | null>(null);
@@ -378,13 +377,11 @@ export default function App() {
 
   const finishIntake = useCallback((ctx: ShopContext) => {
     setShop(ctx);
-    setPlatformFilter("all");
     setShowIntake(false);
   }, []);
 
   const skipIntake = useCallback(() => {
     setShop((prev) => ({ ...prev, enabled: false, routed: true, paste: null }));
-    setPlatformFilter("all");
     setShowIntake(false);
   }, []);
 
@@ -409,15 +406,17 @@ export default function App() {
         publishedAvailable={publishedAvailable}
         shop={shop}
         onShopChange={setShop}
-        platformFilter={platformFilter}
-        onPlatformFilter={setPlatformFilter}
         onStartIntake={startIntake}
         onOpenCredits={openCredits}
         liveError={error}
         onClearError={() => setError(null)}
       />
       {showIntro && (
-        <AboutOverlay mode="intro" onClose={() => setShowIntro(false)} />
+        <AboutOverlay
+          mode="intro"
+          onClose={() => setShowIntro(false)}
+          onStartIntake={startIntake}
+        />
       )}
       {showCredits && (
         <AboutOverlay

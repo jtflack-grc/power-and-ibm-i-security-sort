@@ -8,9 +8,6 @@ from pydantic import BaseModel, Field
 
 class Platform(str, Enum):
     IBM_I = "ibm_i"
-    AIX = "aix"
-    LINUX_ON_POWER = "linux_on_power"
-    ZOS = "zos"
 
 
 class Bucket(str, Enum):

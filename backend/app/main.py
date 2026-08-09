@@ -10,8 +10,8 @@ from fastapi.staticfiles import StaticFiles
 from app.api.triage import router as triage_router
 
 app = FastAPI(
-    title="IBM Power & Z Vulnerability Curator",
-    description="Curate public vulnerability intelligence for IBM Power and IBM Z into actionable systems work.",
+    title="IBM i Vulnerability Curator",
+    description="Curate public vulnerability intelligence for IBM i into actionable systems work and verification evidence.",
     version="0.1.0",
 )
 

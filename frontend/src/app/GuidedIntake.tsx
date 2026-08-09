@@ -7,11 +7,9 @@ import {
   type Privilege,
   type ShopContext,
 } from "../shopContext";
-import type { Platform } from "../types";
+type Step = "exposure" | "privilege" | "pressure" | "paste";
 
-type Step = "platform" | "exposure" | "privilege" | "pressure" | "paste";
-
-const STEPS: Step[] = ["platform", "exposure", "privilege", "pressure", "paste"];
+const STEPS: Step[] = ["exposure", "privilege", "pressure", "paste"];
 
 interface Props {
   initial: ShopContext;
@@ -81,8 +79,8 @@ export function GuidedIntake({ initial, livePreferred = false, onComplete, onSki
           <h1>Route your queue</h1>
           <p className="welcome-lead">
             {livePreferred
-              ? "Four answers re-weight the queue already loading in this tab. Platform chips stay on All so you can drill in."
-              : "Four answers stay in this browser tab. Platform chips stay on All so you can drill in."}
+              ? "Three answers re-weight the IBM i queue already loading in this tab. An optional PTF/APAR paste stays local."
+              : "Three answers re-weight the IBM i queue in this browser tab. An optional PTF/APAR paste stays local."}
           </p>
           <div className="intake-bar" aria-hidden>
             <div style={{ transform: `scaleX(${progress / 100})` }} />
@@ -91,32 +89,6 @@ export function GuidedIntake({ initial, livePreferred = false, onComplete, onSki
             Step {stepIdx + 1} of {STEPS.length}
           </div>
         </div>
-
-        {step === "platform" && (
-          <fieldset className="intake-field">
-            <legend>Which platform should lead the sort?</legend>
-            <div className="intake-options">
-              {(
-                [
-                  ["ibm_i", "IBM i"],
-                  ["aix", "AIX"],
-                  ["linux_on_power", "Linux on Power"],
-                  ["zos", "z/OS"],
-                  ["multi", "Multi / all"],
-                ] as Array<[Platform | "multi", string]>
-              ).map(([id, label]) => (
-                <button
-                  key={id}
-                  type="button"
-                  className={`chip ${draft.primaryPlatform === id ? "active" : ""}`}
-                  onClick={() => setDraft({ ...draft, primaryPlatform: id })}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          </fieldset>
-        )}
 
         {step === "exposure" && (
           <fieldset className="intake-field">
@@ -144,7 +116,7 @@ export function GuidedIntake({ initial, livePreferred = false, onComplete, onSki
 
         {step === "privilege" && (
           <fieldset className="intake-field">
-            <legend>Privilege surface on that platform?</legend>
+            <legend>What is the privileged-profile surface?</legend>
             <div className="intake-options">
               {(
                 [
@@ -191,7 +163,7 @@ export function GuidedIntake({ initial, livePreferred = false, onComplete, onSki
 
         {step === "paste" && (
           <fieldset className="intake-field">
-            <legend>Optional — paste a PSP / DSPPTF / instfix snippet</legend>
+            <legend>Optional — paste a PSP / DSPPTF snippet</legend>
             <p className="intake-hint">
               Parsed in-browser for PTF / APAR tokens. Cleared when the tab closes. Skip if you
               have nothing handy.
@@ -213,7 +185,7 @@ export function GuidedIntake({ initial, livePreferred = false, onComplete, onSki
           </fieldset>
         )}
 
-        {step === "platform" && (
+        {step === "exposure" && (
           <div className="intake-personas">
             <div className="intake-personas-label">Or jump a persona</div>
             <div className="intake-options">

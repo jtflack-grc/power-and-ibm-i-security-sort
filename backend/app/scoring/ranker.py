@@ -1,5 +1,5 @@
 """
-Multi-source counter-lever ranker for Power System Vulnerability Curator.
+Multi-source counter-lever ranker for IBM i Vulnerability Curator.
 
 Philosophy
 ----------
@@ -14,7 +14,7 @@ CVSS alone sorts by theoretical blast radius. That floods Urgents with
     - NVD CVSS severity / score
     - Network / adjacent attack vector from CVSS vector string
     - OWASP Top 10 CWE mapping (context, not automatic urgency)
-    - IBM Security Bulletin confirmation (vendor acknowledges Power/IBM i impact)
+    - IBM Security Bulletin confirmation (vendor acknowledges IBM i impact)
     - Strong CPE platform match
     - Recent publication / modification window
 
@@ -357,7 +357,7 @@ def apply_levers(finding: Finding, cfg: RankerConfig | None = None) -> Finding:
                     source="NVD CPE",
                     direction=LeverDirection.UP,
                     weight=cfg.cpe_match_boost,
-                    reason="Strong CPE match to a Power-family platform.",
+                    reason="Strong CPE match to IBM i.",
                     evidence={
                         "platforms": [p.platform.value for p in finding.platforms],
                     },
@@ -378,11 +378,11 @@ def apply_levers(finding: Finding, cfg: RankerConfig | None = None) -> Finding:
             )
 
     # --- Freshness vs stale-without-signal ---
-    # Recent boost may use last_modified (NVD churn). Museum / stale demotion must
-    # use *published* age — otherwise 2009 CVEs with 2026 last_modified look "fresh".
+    # Operational freshness uses publication age. NVD bulk-maintenance churn must
+    # not make a 2021 CVE look like a newly disclosed 2026 issue.
     now = datetime.now(timezone.utc)
     published_dt = _parse_dt(finding.published)
-    activity_dt = _parse_dt(finding.last_modified) or published_dt
+    activity_dt = published_dt
     if activity_dt is not None:
         activity_days = max(0, (now - activity_dt).days)
         if activity_days <= cfg.recent_days:
@@ -392,7 +392,7 @@ def apply_levers(finding: Finding, cfg: RankerConfig | None = None) -> Finding:
                     source="NVD chronology",
                     direction=LeverDirection.UP,
                     weight=cfg.recent_boost,
-                    reason=f"Published/modified within {cfg.recent_days} days ({activity_days}d).",
+                    reason=f"Published within {cfg.recent_days} days ({activity_days}d).",
                     evidence={"age_days": activity_days},
                 )
             )

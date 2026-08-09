@@ -1,4 +1,4 @@
-const INTRO_SEEN_KEY = "psvc-intro-seen-v1";
+const INTRO_SEEN_KEY = "psvc-intro-seen-v2";
 
 export function hasSeenIntro(): boolean {
   try {
@@ -22,14 +22,21 @@ interface Props {
   mode: Mode;
   onClose: () => void;
   onReplayIntro?: () => void;
+  onStartIntake?: () => void;
 }
 
-export function AboutOverlay({ mode, onClose, onReplayIntro }: Props) {
+export function AboutOverlay({ mode, onClose, onReplayIntro, onStartIntake }: Props) {
   const isIntro = mode === "intro";
 
   const enter = () => {
     markIntroSeen();
     onClose();
+  };
+
+  const route = () => {
+    markIntroSeen();
+    onClose();
+    onStartIntake?.();
   };
 
   return (
@@ -38,42 +45,68 @@ export function AboutOverlay({ mode, onClose, onReplayIntro }: Props) {
         {isIntro ? (
           <>
             <p className="about-kicker">Before the queue</p>
-            <h1 id="about-title">IBM Power &amp; Z Vulnerability Curator</h1>
+            <h1 id="about-title">Turn IBM i security bulletins into system work</h1>
             <p className="welcome-lead">
-              This is a curator, not a scanner. It turns public CVE intel for IBM Power (IBM i,
-              AIX, Linux on Power) and IBM Z (z/OS) into a shared Apply / Contain / Monitor work
-              queue — with explainable counter-levers instead of CVSS-alone panic.
+              IBM publishes the affected product and remedy. This curator organizes those current
+              IBM i bulletins into an explainable <strong>Apply / Contain / Monitor</strong> queue,
+              then carries the operator from risk signal to PTF or APAR evidence and verification.
             </p>
-            <ul className="welcome-method">
-              <li>
-                <strong>Feeds</strong> A scheduled public snapshot loads next (focused modern rail —
-                museum CVEs stay out unless you ask)
-              </li>
-              <li>
-                <strong>Route</strong> Optional shop answers re-weight this tab only; nothing is
-                uploaded
-              </li>
-              <li>
-                <strong>Work</strong> Open a finding for Resolve (bulletin / PTF / APAR) and Interim
-                controls, then copy a change packet if you want
-              </li>
-            </ul>
+
+            <div className="welcome-source-line">
+              <strong>Discovery authority</strong>
+              <span>IBM Product Security Central / PSIRT</span>
+              <small>NVD, CISA KEV, EPSS, CVSS, and OWASP add context; they do not define the queue.</small>
+            </div>
+
+            <div className="welcome-rail-map" aria-label="The three application rails">
+              <section>
+                <span className="welcome-rail-number">01</span>
+                <h2>Findings</h2>
+                <p>Start with IBM&apos;s newest published issues. Filters and shop context help narrow the queue.</p>
+              </section>
+              <section>
+                <span className="welcome-rail-number">02</span>
+                <h2>Issue workbench</h2>
+                <p>See why the issue ranks, what IBM says to apply, and what to contain while change work proceeds.</p>
+              </section>
+              <section>
+                <span className="welcome-rail-number">03</span>
+                <h2>LCL evidence check</h2>
+                <p>Use command coaching and source-validated 5250 screens to verify resolved PTF evidence.</p>
+              </section>
+            </div>
+
+            <div className="welcome-first-pass">
+              <strong>Your first pass</strong>
+              <ol>
+                <li>Select a recent finding in the left rail.</li>
+                <li>Review its ranking levers and IBM remediation path.</li>
+                <li>Use the evidence rail when a validated PTF scenario is available.</li>
+              </ol>
+            </div>
             <p className="welcome-honesty">
-              Portfolio demo by John Flack · i on GRC. Public feeds only. Not a scanner of record.
+              This is a decision and evidence companion, not a scanner of record, Fix Central,
+              or a live connection to an IBM i partition. Optional shop answers stay in this tab.
             </p>
             <div className="welcome-actions">
               <button type="button" className="button button-primary" onClick={enter}>
-                Enter the queue
+                Enter current queue
               </button>
+              {onStartIntake && (
+                <button type="button" className="button" onClick={route}>
+                  Route for my shop first
+                </button>
+              )}
             </div>
           </>
         ) : (
           <>
             <p className="about-kicker">Credits</p>
-            <h1 id="about-title">IBM Power &amp; Z Vulnerability Curator</h1>
+            <h1 id="about-title">IBM i Vulnerability Curator</h1>
             <p className="welcome-lead">
               Built by <strong>John Flack</strong> (jtflack-grc) as a portfolio artifact that
-              translates GRC / vuln-management language into IBM Power and IBM Z systems work.
+              translates GRC / vulnerability-management language into IBM i systems work and
+              verification evidence.
             </p>
             <ul className="welcome-method">
               <li>
@@ -81,12 +114,12 @@ export function AboutOverlay({ mode, onClose, onReplayIntro }: Props) {
                 NVD, EPSS, OWASP context, IBM bulletin hints → Apply / Contain / Monitor
               </li>
               <li>
-                <strong>Platform scope</strong> IBM Power = IBM i, AIX, Linux on Power; IBM Z =
-                z/OS
+                <strong>Platform scope</strong> IBM i only, including operating-system and
+                supply-chain findings with a defensible IBM i applicability signal
               </li>
               <li>
                 <strong>What it isn&apos;t</strong> A scanner of record, an authenticated enterprise
-                service, or a replacement for Fix Central / your change board
+                service, a live IBM i terminal, or a replacement for Fix Central / your change board
               </li>
               <li>
                 <strong>How Pages works</strong> Daily scheduled public intel snapshot, no open API,

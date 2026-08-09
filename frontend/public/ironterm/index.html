@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>IBM i verification terminal</title>
+    <link href="../fonts/fonts.css" rel="stylesheet" />
+    <link rel="stylesheet" href="./scenario.css" />
+  </head>
+  <body>
+    <main class="terminal-shell" aria-label="Synthetic IBM i 5250 verification terminal">
+      <div class="terminal-stage">
+        <canvas id="screen" width="960" height="576" tabindex="0"></canvas>
+        <div id="status" class="terminal-feedback" role="status" aria-live="polite"></div>
+        <div id="fixture-empty" class="fixture-empty">
+          <strong>No PTF scenario loaded</strong>
+          <span>The terminal is intentionally blank until a source-validated 5250 fixture is available.</span>
+        </div>
+      </div>
+    </main>
+    <script type="module" src="./scenario-main.js"></script>
+  </body>
+</html>

@@ -13,7 +13,7 @@ from app.models import Finding
 RiskSurface = Literal["platform", "supply_chain", "mixed"]
 ActionLane = Literal["apply", "contain", "monitor"]
 
-# Third-party / open-source stack that commonly rides on Power / IBM i / AIX / z
+# Third-party / open-source stack that commonly rides on IBM i.
 SUPPLY_CHAIN_PATTERNS = [
     r"\bapache\b",
     r"\btomcat\b",
@@ -55,17 +55,10 @@ PLATFORM_NATIVE_PATTERNS = [
     r"\bibm i\b",
     r"\bos/400\b",
     r"\bos400\b",
-    r"\baix\b",
-    r"\bz/os\b",
-    r"\bzos\b",
-    r"\bpowervm\b",
-    r"\bpowervm\b",
-    r"\bhmc\b",
-    r"\bfabric\b",
     r"\bdb2 for i\b",
-    r"\bdb2 for z\b",
     r"\bqsys\b",
-    r"\bicl\b",
+    r"\bqsys2\b",
+    r"\bpase\b",
 ]
 
 
@@ -103,15 +96,10 @@ def classify_risk_surface(finding: Finding) -> RiskSurface:
 def _has_package_fix(finding: Finding) -> bool:
     for step in finding.resolution_steps or []:
         kind = str(step.get("kind", "")).lower()
-        if kind in {"ptf", "apar", "bulletin", "summary"}:
-            # "unknown" kinds don't count; bulletin alone is a package path
-            if kind == "summary" and "no packaged" in str(step.get("detail", "")).lower():
-                continue
+        if kind in {"ptf", "ptf_group", "apar", "fixpack"}:
             return True
         title = str(step.get("title", "")).lower()
         if title.startswith("ptf ") or title.startswith("apar "):
-            return True
-        if "security bulletin" in title:
             return True
     return False
 

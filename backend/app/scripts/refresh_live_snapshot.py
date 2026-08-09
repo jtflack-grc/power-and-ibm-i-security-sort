@@ -43,6 +43,7 @@ async def refresh(out_path: Path, force_refresh: bool) -> int:
         force_refresh=force_refresh,
         on_progress=_log_progress,
         extra_notes=[PUBLISH_NOTE],
+        max_bulletin_fetches=None,
     )
     if not result.findings:
         print("ERROR: snapshot produced zero findings — refusing to write.", file=sys.stderr)
