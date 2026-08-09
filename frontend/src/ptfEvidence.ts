@@ -38,7 +38,10 @@ export function extractPtfEvidence(finding: Finding | null): PtfEvidence {
   const releaseMatch = trustedText.match(/\b(?:IBM i\s+)?([1-9])\.([0-9])\b/i);
   const release = releaseMatch ? `V${releaseMatch[1]}R${releaseMatch[2]}M0` : "V7R4M0";
   return {
-    ptfs: ptfs.slice(0, 7),
+    // Bulletin tables commonly contain one row per IBM i release. Until those
+    // rows are stored structurally, render only the first summary-ordered PTF
+    // so one DSPPTF release header never claims cross-release identifiers.
+    ptfs: ptfs.slice(0, 1),
     groups: groups.slice(0, 7),
     apars: apars.slice(0, 12),
     summaries: summaries.slice(0, 3),
