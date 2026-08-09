@@ -36,6 +36,12 @@ export function isMuseumFinding(f: Finding): boolean {
   return ageDays >= MUSEUM_AGE_DAYS;
 }
 
+function hasPtfEvidence(f: Finding): boolean {
+  return Boolean(
+    f.resolution_steps?.some((step) => String(step.kind ?? "").toLowerCase() === "ptf")
+  );
+}
+
 export function FindingsPanel({
   findings,
   selectedId,
@@ -47,12 +53,14 @@ export function FindingsPanel({
   const [bucket, setBucket] = useState<Bucket | "all">("all");
   const [includeOlder, setIncludeOlder] = useState(false);
   const [showAll, setShowAll] = useState(false);
+  const [ptfOnly, setPtfOnly] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
   const skipAutoScroll = useRef(true);
 
   const filtered = useMemo(() => {
     return findings.filter((f) => {
       if (bucket !== "all" && f.bucket !== bucket) return false;
+      if (ptfOnly && !hasPtfEvidence(f)) return false;
       if (laneFilter !== "all" && (f.action_lane ?? "monitor") !== laneFilter) {
         return false;
       }
@@ -64,7 +72,9 @@ export function FindingsPanel({
       }
       return true;
     });
-  }, [findings, bucket, laneFilter, includeOlder, selectedId, pasteHitIds]);
+  }, [findings, bucket, laneFilter, includeOlder, selectedId, pasteHitIds, ptfOnly]);
+
+  const ptfCount = useMemo(() => findings.filter(hasPtfEvidence).length, [findings]);
 
   const olderHidden = useMemo(() => {
     if (includeOlder) return 0;
@@ -83,6 +93,13 @@ export function FindingsPanel({
   const visible = useMemo(() => {
     if (showAll || filtered.length <= FOCUS_LIMIT) return filtered;
     const head = filtered.slice(0, FOCUS_LIMIT);
+    // A source-extracted PTF unlocks the verification rail, so retain those
+    // sparse rows in the focused queue even when rank places them below 40.
+    for (const finding of filtered) {
+      if (hasPtfEvidence(finding) && !head.some((f) => f.cve_id === finding.cve_id)) {
+        head.push(finding);
+      }
+    }
     if (selectedId && !head.some((f) => f.cve_id === selectedId)) {
       const selected = filtered.find((f) => f.cve_id === selectedId);
       if (selected) return [...head, selected];
@@ -155,6 +172,16 @@ export function FindingsPanel({
             {b}
           </button>
         ))}
+        {ptfCount > 0 && (
+          <button
+            type="button"
+            className={`chip ${ptfOnly ? "active" : ""}`}
+            onClick={() => setPtfOnly((value) => !value)}
+            title="Show findings with a PTF identifier extracted from IBM guidance"
+          >
+            PTF evidence ({ptfCount})
+          </button>
+        )}
       </div>
       {laneFilter !== "all" && (
         <div className="findings-filters">
@@ -225,6 +252,7 @@ export function FindingsPanel({
               )}
               {supply && <span className="badge badge-supply">Supply chain</span>}
               {f.on_kev && <span className="badge kev">KEV</span>}
+              {hasPtfEvidence(f) && <span className="badge badge-ptf">PTF</span>}
               {pasteHitIds.includes(f.cve_id) && (
                 <span className="badge badge-paste">paste match</span>
               )}

@@ -442,6 +442,12 @@ a {
   border-color: var(--danger);
 }
 
+.badge-ptf {
+  border-color: rgba(111, 217, 154, 0.55);
+  color: var(--green);
+  background: rgba(111, 217, 154, 0.08);
+}
+
 .badge.urgent {
   color: var(--danger);
   border-color: rgba(232, 93, 93, 0.45);
