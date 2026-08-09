@@ -183,6 +183,36 @@ a {
   color: var(--muted);
 }
 
+.panel-head-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.45rem;
+}
+
+.panel-source-button {
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  padding: 0.25rem 0.45rem;
+  font: 0.66rem "IBM Plex Mono", monospace;
+  cursor: pointer;
+}
+
+.panel-source-button:hover,
+.panel-source-button[aria-expanded="true"] {
+  border-color: var(--green);
+  color: var(--green);
+}
+
+.feed-source-drawer {
+  padding: 0.65rem 0.9rem 0;
+}
+
+.feed-source-drawer .feed-health {
+  margin: 0;
+}
+
 .panel-body {
   padding: 0.75rem;
   overflow: auto;

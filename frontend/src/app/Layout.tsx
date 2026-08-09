@@ -83,6 +83,7 @@ export function Layout({
   const [selected, setSelected] = useState<Finding | null>(null);
   const [laneFilter, setLaneFilter] = useState<ActionLane | "all">("all");
   const [showFlagship, setShowFlagship] = useState(true);
+  const [showFeedSources, setShowFeedSources] = useState(false);
 
   const findings = useMemo(() => result?.findings ?? [], [result?.findings]);
   const publishedStamp = formatStamp(result?.generated_at);
@@ -382,13 +383,23 @@ export function Layout({
         <section className={`panel ${pane !== "flow" ? "hidden-mobile" : ""}`}>
           <div className="panel-head">
             <h2>Evidence</h2>
-            <div className="meta">IBM i command path</div>
+            <div className="panel-head-actions">
+              <span className="meta">IBM i command path</span>
+              {result && (
+                <button
+                  type="button"
+                  className="panel-source-button"
+                  aria-expanded={showFeedSources}
+                  onClick={() => setShowFeedSources((value) => !value)}
+                >
+                  Feed sources
+                </button>
+              )}
+            </div>
           </div>
           <div className="panel-body panel-body-docks">
-            <PtfCommandCoach finding={selectedResolved} />
-            <VerificationRail finding={selectedResolved} />
-            {result && (
-              <div className="feed-aside-wrap">
+            {result && showFeedSources && (
+              <div className="feed-source-drawer">
                 <FeedHealthStrip
                   health={result.feed_health ?? []}
                   notes={result.notes}
@@ -397,6 +408,8 @@ export function Layout({
                 />
               </div>
             )}
+            <PtfCommandCoach finding={selectedResolved} />
+            <VerificationRail finding={selectedResolved} />
           </div>
         </section>
       </main>
