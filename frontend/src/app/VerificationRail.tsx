@@ -1,19 +1,37 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { Finding } from "../types";
+import type { Bulletin, Finding } from "../types";
 import { extractPtfEvidence } from "../ptfEvidence";
 import { RemediationAssist } from "./RemediationAssist";
 
 interface Props {
   finding: Finding | null;
+  bulletin?: Bulletin | null;
 }
 
-export function VerificationRail({ finding }: Props) {
+export function VerificationRail({ finding, bulletin = null }: Props) {
   const frameRef = useRef<HTMLIFrameElement>(null);
   const channelTokenRef = useRef(crypto.randomUUID());
   const [showSources, setShowSources] = useState(false);
-  const scenarioMeta = useMemo(() => extractPtfEvidence(finding), [finding]);
+  const applicableRows = useMemo(
+    () => (bulletin?.applicability ?? []).filter((row) => row.product_id && row.release_system && row.individual_ptfs.length),
+    [bulletin]
+  );
+  const [applicabilityId, setApplicabilityId] = useState("");
+  useEffect(() => {
+    setApplicabilityId(applicableRows.length === 1 ? applicableRows[0].applicability_id : "");
+  }, [finding?.cve_id, applicableRows]);
+  const selectedApplicability = applicableRows.find((row) => row.applicability_id === applicabilityId);
+  const fallbackMeta = useMemo(() => extractPtfEvidence(finding), [finding]);
+  const scenarioMeta = useMemo(() => selectedApplicability ? {
+    ptfs: selectedApplicability.individual_ptfs.slice(0, 1),
+    groups: selectedApplicability.group_ptfs,
+    apars: selectedApplicability.apars,
+    summaries: [],
+    productId: selectedApplicability.product_id || "",
+    release: selectedApplicability.release_system || "",
+  } : fallbackMeta, [selectedApplicability, fallbackMeta]);
   const ptfs = scenarioMeta.ptfs;
-  const hasPtfPath = ptfs.length > 0;
+  const hasPtfPath = ptfs.length > 0 && Boolean(scenarioMeta.productId && scenarioMeta.release);
 
   useEffect(() => {
     const load = () => {
@@ -80,6 +98,19 @@ export function VerificationRail({ finding }: Props) {
             : `${finding.cve_id} does not resolve to an individual PTF. The evidence workspace below is routed by the remediation type IBM published.`
           : "Select a finding to assess whether an IBM i verification scenario applies."}
       </p>
+      {applicableRows.length > 1 && (
+        <label className="verification-applicability">
+          Applicable IBM i fix row
+          <select value={applicabilityId} onChange={(event) => setApplicabilityId(event.target.value)}>
+            <option value="">Select release and product</option>
+            {applicableRows.map((row) => (
+              <option key={row.applicability_id} value={row.applicability_id}>
+                IBM i {row.release} · {row.product_id} · {row.individual_ptfs.join(", ")}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
       {hasPtfPath ? (
         <div className="verification-frame-wrap">
           <iframe

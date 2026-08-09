@@ -32,11 +32,9 @@ export function extractPtfEvidence(finding: Finding | null): PtfEvidence {
     .map((step) => step.detail.trim())
     .filter(Boolean);
   const productMatch = trustedText.match(/\b(\d{4})-?([A-Z0-9]{3})\b/i);
-  const productId = productMatch
-    ? `${productMatch[1]}${productMatch[2]}`.toUpperCase()
-    : "5770SS1";
+  const productId = productMatch ? `${productMatch[1]}${productMatch[2]}`.toUpperCase() : "";
   const releaseMatch = trustedText.match(/\b(?:IBM i\s+)?([1-9])\.([0-9])\b/i);
-  const release = releaseMatch ? `V${releaseMatch[1]}R${releaseMatch[2]}M0` : "V7R4M0";
+  const release = releaseMatch ? `V${releaseMatch[1]}R${releaseMatch[2]}M0` : "";
   return {
     // Bulletin tables commonly contain one row per IBM i release. Until those
     // rows are stored structurally, render only the first summary-ordered PTF

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { Finding } from "../types";
+import type { Bulletin, Finding } from "../types";
 import { PLATFORM_LABELS } from "../types";
 import {
   cveRecordUrl,
@@ -11,6 +11,8 @@ import { changePacketMarkdown, type ShopContext } from "../shopContext";
 interface Props {
   finding: Finding | null;
   shop?: ShopContext | null;
+  bulletin?: Bulletin | null;
+  generatedAt?: string | null;
 }
 
 type DiveTab = "fix" | "interim";
@@ -20,7 +22,7 @@ function defaultTab(finding: Finding): DiveTab {
   return "fix";
 }
 
-export function IssueDetailPanel({ finding, shop }: Props) {
+export function IssueDetailPanel({ finding, shop, bulletin, generatedAt }: Props) {
   const [tab, setTab] = useState<DiveTab>("fix");
   const [copied, setCopied] = useState(false);
 
@@ -45,7 +47,7 @@ export function IssueDetailPanel({ finding, shop }: Props) {
   );
 
   const downloadPacket = () => {
-    const md = changePacketMarkdown(finding, shop);
+    const md = changePacketMarkdown(finding, shop, { bulletin, generatedAt });
     const blob = new Blob([md], { type: "text/markdown;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -56,7 +58,7 @@ export function IssueDetailPanel({ finding, shop }: Props) {
   };
 
   const copyPacket = async () => {
-    const md = changePacketMarkdown(finding, shop);
+    const md = changePacketMarkdown(finding, shop, { bulletin, generatedAt });
     try {
       await navigator.clipboard.writeText(md);
       setCopied(true);
