@@ -43,7 +43,7 @@ export const DEFAULT_SHOP: ShopContext = {
   routed: false,
 };
 
-const PTF_RE = /\b(?:SI|MF|UJ|UI|SE)\d{4,7}\b/gi;
+const PTF_RE = /\b(?:SI|SJ|MF|UJ|UI|SE|UA|UB|UC)\d{4,7}\b/gi;
 const APAR_RE = /\b(?:APAR\s+)?([A-Z]{2}\d{5,7})\b/gi;
 
 /** Parse PSP / DSPPTF paste client-side. Never leaves the browser. */
@@ -54,7 +54,7 @@ export function parseShopPaste(raw: string): PasteTokens {
   for (const m of text.matchAll(APAR_RE)) {
     const token = (m[1] || m[0]).toUpperCase().replace(/^APAR\s+/, "");
     // Skip false-positives that look like PTFs already captured
-    if (/^(SI|MF|UJ|UI|SE)\d/.test(token)) continue;
+    if (/^(SI|SJ|MF|UJ|UI|SE|UA|UB|UC)\d/.test(token)) continue;
     if (/^[A-Z]{2}\d{5,7}$/.test(token)) apars.push(token);
   }
   return {

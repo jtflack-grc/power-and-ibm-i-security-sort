@@ -23,9 +23,10 @@ from app.models import Finding, Platform
 
 # IBM i PTF/APAR identifiers — best-effort extraction from public IBM bulletins.
 PTF_TOKEN_RE = re.compile(
-    r"\b(?:SI|MF|UJ|UI|SE|UA|UB|UC)\d{4,7}\b",
+    r"\b(?:SI|SJ|MF|UJ|UI|SE|UA|UB|UC)\d{4,7}\b",
     re.IGNORECASE,
 )
+GROUP_PTF_TOKEN_RE = re.compile(r"\bSF\d{5}\b", re.IGNORECASE)
 APAR_RE = re.compile(
     r"\b(?:APAR|apar)\s*[:=]?\s*([A-Z]{2}\d{5,7})\b|\b(?:IJ|IV|IX|PH|OA)\d{5,7}\b",
     re.IGNORECASE,
@@ -38,6 +39,26 @@ FIX_LINE_RE = re.compile(
 def _sanitize(text: str, limit: int = 500) -> str:
     cleaned = " ".join("".join(ch for ch in text if ord(ch) >= 32).split())
     return cleaned[: limit - 1] + "…" if len(cleaned) > limit else cleaned
+
+
+def _hydrate_fix_tokens(record: dict[str, Any]) -> dict[str, Any]:
+    """Recover identifiers from trusted cached summaries as parser rules evolve."""
+    blob = " ".join(
+        [
+            str(record.get("summary") or ""),
+            str(record.get("affected") or ""),
+            *[str(value) for value in record.get("fix_snippets") or []],
+        ]
+    )
+    record["ptfs"] = sorted(
+        {str(value).upper() for value in record.get("ptfs") or []}
+        | {value.upper() for value in PTF_TOKEN_RE.findall(blob)}
+    )[:20]
+    record["ptf_groups"] = sorted(
+        {str(value).upper() for value in record.get("ptf_groups") or []}
+        | {value.upper() for value in GROUP_PTF_TOKEN_RE.findall(blob)}
+    )[:20]
+    return record
 
 
 def _is_allowed_bulletin_fetch(url: str) -> bool:
@@ -149,10 +170,11 @@ async def scrape_bulletin_fixes(
     cache_key = f"bulletin_fixes:{url}"
     cached = cache.get(cache_key)
     if cached is not None:
-        return cached
+        return _hydrate_fix_tokens(cached)
 
     record: dict[str, Any] = {
         "ptfs": [],
+        "ptf_groups": [],
         "apars": [],
         "fix_snippets": [],
         "summary": None,
@@ -186,6 +208,9 @@ async def scrape_bulletin_fixes(
         )
         search_blob = f"{table_blob} {text}"
         record["ptfs"] = sorted({p.upper() for p in PTF_TOKEN_RE.findall(search_blob)})[:20]
+        record["ptf_groups"] = sorted(
+            {p.upper() for p in GROUP_PTF_TOKEN_RE.findall(search_blob)}
+        )[:20]
         apars: list[str] = []
         for match in APAR_RE.finditer(search_blob):
             token = match.group(1) if match.lastindex else match.group(0)
@@ -238,6 +263,7 @@ async def scrape_bulletin_fixes(
     except httpx.HTTPError:
         pass
 
+    record = _hydrate_fix_tokens(record)
     cache.set(cache_key, record)
     return record
 
@@ -331,6 +357,17 @@ def attach_guidance(finding: Finding, bulletin: dict[str, Any] | None = None) ->
                     "before apply — identifiers can appear in related-product sections."
                 ),
                 "kind": "ptf",
+            }
+        )
+    for group in bulletin.get("ptf_groups") or []:
+        resolution_steps.append(
+            {
+                "title": f"PTF group {group}",
+                "detail": (
+                    "IBM remediation names this group PTF. Verify its installed level "
+                    "with WRKPTFGRP; do not treat the group identifier as an individual DSPPTF selection."
+                ),
+                "kind": "ptf_group",
             }
         )
     for apar in bulletin.get("apars") or []:

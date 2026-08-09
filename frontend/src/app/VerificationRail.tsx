@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Finding } from "../types";
+import { extractPtfEvidence } from "../ptfEvidence";
 
 interface Props {
   finding: Finding | null;
@@ -9,22 +10,8 @@ export function VerificationRail({ finding }: Props) {
   const frameRef = useRef<HTMLIFrameElement>(null);
   const channelTokenRef = useRef(crypto.randomUUID());
   const [showSources, setShowSources] = useState(false);
-  const ptfs = useMemo(() => {
-    const tokens = (finding?.resolution_steps ?? [])
-      .filter((step) => String(step.kind ?? "").toLowerCase() === "ptf")
-      .flatMap((step) => `${step.title} ${step.detail}`.match(/\b[A-Z]{2}\d{5,7}\b/g) ?? [])
-      .map((token) => token.toUpperCase());
-    return [...new Set(tokens)].slice(0, 7);
-  }, [finding]);
-  const scenarioMeta = useMemo(() => {
-    const guidance = (finding?.resolution_steps ?? [])
-      .map((step) => `${step.title} ${step.detail}`)
-      .join(" ");
-    const productId = guidance.match(/\b\d{4}[A-Z0-9]{3}\b/)?.[0] ?? "5770SS1";
-    const releaseMatch = guidance.match(/\b(?:IBM i\s+)?([1-9])\.([0-9])\b/i);
-    const release = releaseMatch ? `V${releaseMatch[1]}R${releaseMatch[2]}M0` : "V7R4M0";
-    return { productId, release };
-  }, [finding]);
+  const scenarioMeta = useMemo(() => extractPtfEvidence(finding), [finding]);
+  const ptfs = scenarioMeta.ptfs;
   const hasPtfPath = ptfs.length > 0;
 
   useEffect(() => {

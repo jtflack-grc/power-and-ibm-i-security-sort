@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { ActionLane } from "./ActionLanesFlow";
 import type { Bucket, Finding } from "../types";
 import { PLATFORM_LABELS } from "../types";
+import { hasIndividualPtfEvidence } from "../ptfEvidence";
 
 interface Props {
   findings: Finding[];
@@ -38,9 +39,7 @@ export function isMuseumFinding(f: Finding): boolean {
 }
 
 function hasPtfEvidence(f: Finding): boolean {
-  return Boolean(
-    f.resolution_steps?.some((step) => String(step.kind ?? "").toLowerCase() === "ptf")
-  );
+  return hasIndividualPtfEvidence(f);
 }
 
 export function FindingsPanel({

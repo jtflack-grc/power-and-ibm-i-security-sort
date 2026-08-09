@@ -1,21 +1,15 @@
 import { useMemo } from "react";
 import type { Finding } from "../types";
+import { extractPtfEvidence } from "../ptfEvidence";
 
 interface Props {
   finding: Finding | null;
 }
 
-function commandContext(finding: Finding | null) {
-  const guidance = (finding?.resolution_steps ?? [])
-    .map((step) => `${step.title} ${step.detail}`)
-    .join(" ");
-  const ptfs = [...new Set((guidance.match(/\b[A-Z]{2}\d{5,7}\b/g) ?? []).map((v) => v.toUpperCase()))];
-  const product = guidance.match(/\b\d{4}[A-Z0-9]{3}\b/)?.[0] ?? "5770SS1";
-  return { ptf: ptfs[0] ?? null, product };
-}
-
 export function PtfCommandCoach({ finding }: Props) {
-  const { ptf, product } = useMemo(() => commandContext(finding), [finding]);
+  const evidence = useMemo(() => extractPtfEvidence(finding), [finding]);
+  const ptf = evidence.ptfs[0] ?? null;
+  const product = evidence.productId;
   const displayCommand = ptf
     ? `DSPPTF LICPGM(${product}) SELECT(${ptf})`
     : `DSPPTF LICPGM(${product}) SELECT(*NOTAPY)`;
