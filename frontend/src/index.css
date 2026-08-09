@@ -359,13 +359,14 @@ a {
 .command-coach-steps {
   display: grid;
   grid-template-columns: 1.2fr 1fr 1fr;
+  min-height: 142px;
   border: 1px solid var(--line);
   background: #050706;
 }
 
 .command-coach-step {
   min-width: 0;
-  padding: 0.65rem 0.7rem;
+  padding: 0.85rem 0.8rem;
   border-right: 1px solid var(--line);
 }
 
@@ -1595,6 +1596,10 @@ a {
   margin: 0.75rem 0.9rem 0;
   border: 1px solid var(--line);
   background: #050706;
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  flex-direction: column;
 }
 
 .verification-head {
@@ -1677,7 +1682,9 @@ a {
 }
 
 .verification-frame-wrap {
-  height: 420px;
+  height: auto;
+  min-height: 420px;
+  flex: 1 1 420px;
   margin: 0 0.9rem 0.9rem;
 }
 
@@ -1695,6 +1702,8 @@ a {
 
   .verification-frame-wrap {
     height: 340px;
+    min-height: 340px;
+    flex-basis: 340px;
   }
 }
 
