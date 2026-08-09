@@ -1,5 +1,16 @@
-from app.collectors.ibm_psirt import _validate_payload_contract, enrich_psirt_from_nvd, parse_psirt_bundle, parse_psirt_payload
+import asyncio
+
+import httpx
 import pytest
+
+from app.collectors.cache import DiskCache
+from app.collectors.ibm_psirt import (
+    _validate_payload_contract,
+    collect_ibmi_psirt_bundle,
+    enrich_psirt_from_nvd,
+    parse_psirt_bundle,
+    parse_psirt_payload,
+)
 from app.models import Finding, Platform, PlatformHit
 
 
@@ -135,3 +146,30 @@ def test_psirt_contract_rejects_missing_bulletin_fields():
 
 def test_psirt_contract_allows_empty_results_for_publication_gate_to_handle():
     _validate_payload_contract({"results": []})
+
+
+def test_force_refresh_parses_fresh_bundle_without_cache_round_trip(tmp_path):
+    """A zero-TTL cache must not discard the payload fetched in this request."""
+    payload = {"results": [{
+        "title": "IBM i bulletin CVE-2026-10001",
+        "field_product": "IBM i 5770-SS1",
+        "field_affected_products": "IBM i 7.6",
+        "field_pub_date": "2026-08-01",
+        "field_published_url": "https://www.ibm.com/support/pages/node/123",
+    }]}
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        assert request.url.params["q"] == "IBM i"
+        return httpx.Response(200, json=payload)
+
+    async def collect():
+        cache = DiskCache(tmp_path, ttl_seconds=0)
+        async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as client:
+            return await collect_ibmi_psirt_bundle(client, cache)
+
+    bundle = asyncio.run(collect())
+
+    assert set(bundle.findings) == {"CVE-2026-10001"}
+    assert [bulletin.bulletin_id for bulletin in bundle.bulletins] == [
+        "ibm-psirt-123"
+    ]
