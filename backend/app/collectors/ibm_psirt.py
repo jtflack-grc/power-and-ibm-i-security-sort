@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 from html.parser import HTMLParser
 from typing import Any
@@ -12,7 +13,7 @@ from app.models import Finding, Platform, PlatformHit
 
 PSIRT_SEARCH_API = "https://www.ibm.com/support/pages/securityapp/api/search"
 _CVE_RE = re.compile(r"\bCVE-\d{4}-\d{4,}\b", re.IGNORECASE)
-_MAX_RESPONSE_BYTES = 8 * 1024 * 1024
+_MAX_RESPONSE_BYTES = 32 * 1024 * 1024
 _MAX_RESULTS = 1000
 _MAX_CVES = 750
 
@@ -135,23 +136,30 @@ async def collect_ibmi_psirt(
     if cached is not None:
         return parse_psirt_payload(cached)
 
-    response = await client.get(
+    body = bytearray()
+    async with client.stream(
+        "GET",
         PSIRT_SEARCH_API,
         params={"q": "IBM i"},
         headers={
             "Accept": "application/json",
             "User-Agent": "IBMiVulnerabilityCurator/1.0 (public-security-research)",
         },
-        timeout=45.0,
+        timeout=60.0,
         follow_redirects=False,
-    )
-    response.raise_for_status()
-    content_type = response.headers.get("content-type", "").lower()
-    if "json" not in content_type:
-        raise ValueError("IBM PSIRT search returned a non-JSON response")
-    if len(response.content) > _MAX_RESPONSE_BYTES:
-        raise ValueError("IBM PSIRT search response exceeded the size limit")
-    payload = response.json()
+    ) as response:
+        response.raise_for_status()
+        content_type = response.headers.get("content-type", "").lower()
+        if "json" not in content_type:
+            raise ValueError("IBM PSIRT search returned a non-JSON response")
+        declared = int(response.headers.get("content-length") or 0)
+        if declared > _MAX_RESPONSE_BYTES:
+            raise ValueError("IBM PSIRT search response exceeded the size limit")
+        async for chunk in response.aiter_bytes():
+            body.extend(chunk)
+            if len(body) > _MAX_RESPONSE_BYTES:
+                raise ValueError("IBM PSIRT search response exceeded the size limit")
+    payload = json.loads(body)
     if not isinstance(payload, dict) or not isinstance(payload.get("results"), list):
         raise ValueError("IBM PSIRT search returned an unexpected response shape")
     cache.set(cache_key, payload)
