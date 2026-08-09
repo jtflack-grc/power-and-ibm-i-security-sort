@@ -30,7 +30,12 @@ export interface BulletinApplicability {
   release_system?: string | null;
   individual_ptfs: string[];
   group_ptfs: string[];
+  group_ptf_levels?: Record<string, number>;
   apars: string[];
+  prerequisite_ptfs?: string[];
+  corequisite_ptfs?: string[];
+  supersedes_ptfs?: string[];
+  application_instructions?: string[];
   source_excerpt: string;
   source_url: string;
   confidence: "structured" | "heuristic" | "unresolved";
@@ -48,6 +53,7 @@ export interface Bulletin {
   unassociated_group_ptfs: string[];
   unassociated_apars: string[];
   affected_source_text: string;
+  change_status?: "new" | "modified" | "unchanged" | "unknown";
 }
 
 export interface Finding {
@@ -122,6 +128,7 @@ export interface TriageResult {
   feed_health?: FeedHealth[];
   notes?: string[];
   flagship_cve?: string;
+  previous_snapshot_at?: string | null;
 }
 
 export interface ProgressEvent {

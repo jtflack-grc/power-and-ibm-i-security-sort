@@ -10,6 +10,8 @@ flowchart TD
     Model --> Guard[Publication guard]
     Guard --> Snapshot[Static JSON snapshot]
     Snapshot --> Rails[Findings / issue / evidence rails]
+    Rails --> Local[Session-local decisions / inventory]
+    Local --> Packet[Markdown evidence packet]
 ```
 
 ## Data units
@@ -21,7 +23,7 @@ flowchart TD
 
 ## Trust boundaries
 
-The scheduled workflow fetches public HTTPS sources. The browser receives sanitized static JSON and fixed terminal fixtures. Shop context and generated packets remain local. Pages has no backend, credentials, arbitrary terminal transport, or IBM i connection.
+The scheduled workflow fetches public HTTPS sources. The browser receives sanitized static JSON and fixed terminal fixtures. Shop context, decision fields, imported inventory tokens, comparisons, and generated packets remain local. Pages has no backend, credentials, arbitrary terminal transport, or IBM i connection.
 
 ## Failure behavior
 

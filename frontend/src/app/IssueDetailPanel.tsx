@@ -7,6 +7,8 @@ import {
   normalizeIbmBulletinUrl,
 } from "../links";
 import { changePacketMarkdown, type ShopContext } from "../shopContext";
+import { loadCaseWorkflow, saveCaseWorkflow, type CaseWorkflow } from "../caseWorkflow";
+import { CaseWorkflowPanel } from "./CaseWorkflowPanel";
 
 interface Props {
   finding: Finding | null;
@@ -25,11 +27,15 @@ function defaultTab(finding: Finding): DiveTab {
 export function IssueDetailPanel({ finding, shop, bulletin, generatedAt }: Props) {
   const [tab, setTab] = useState<DiveTab>("fix");
   const [copied, setCopied] = useState(false);
+  const [workflow, setWorkflow] = useState<CaseWorkflow>(() => finding ? loadCaseWorkflow(finding.cve_id) : loadCaseWorkflow("none"));
 
   useEffect(() => {
-    if (finding) setTab(defaultTab(finding));
+    if (finding) {
+      setTab(defaultTab(finding));
+      setWorkflow(loadCaseWorkflow(finding.cve_id));
+    }
     setCopied(false);
-  }, [finding?.cve_id]);
+  }, [finding]);
 
   if (!finding) {
     return (
@@ -47,7 +53,7 @@ export function IssueDetailPanel({ finding, shop, bulletin, generatedAt }: Props
   );
 
   const downloadPacket = () => {
-    const md = changePacketMarkdown(finding, shop, { bulletin, generatedAt });
+    const md = changePacketMarkdown(finding, shop, { bulletin, generatedAt, workflow });
     const blob = new Blob([md], { type: "text/markdown;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -58,7 +64,7 @@ export function IssueDetailPanel({ finding, shop, bulletin, generatedAt }: Props
   };
 
   const copyPacket = async () => {
-    const md = changePacketMarkdown(finding, shop, { bulletin, generatedAt });
+    const md = changePacketMarkdown(finding, shop, { bulletin, generatedAt, workflow });
     try {
       await navigator.clipboard.writeText(md);
       setCopied(true);
@@ -125,6 +131,10 @@ export function IssueDetailPanel({ finding, shop, bulletin, generatedAt }: Props
             Download .md
           </button>
         </div>
+        <CaseWorkflowPanel value={workflow} onChange={(next) => {
+          setWorkflow(next);
+          saveCaseWorkflow(finding.cve_id, next);
+        }} />
       </div>
 
       <div className="dive-tabs">

@@ -55,7 +55,12 @@ class BulletinApplicability(BaseModel):
     release_system: str | None = None
     individual_ptfs: list[str] = Field(default_factory=list)
     group_ptfs: list[str] = Field(default_factory=list)
+    group_ptf_levels: dict[str, int] = Field(default_factory=dict)
     apars: list[str] = Field(default_factory=list)
+    prerequisite_ptfs: list[str] = Field(default_factory=list)
+    corequisite_ptfs: list[str] = Field(default_factory=list)
+    supersedes_ptfs: list[str] = Field(default_factory=list)
+    application_instructions: list[str] = Field(default_factory=list)
     source_excerpt: str = ""
     source_url: str = ""
     confidence: Literal["structured", "heuristic", "unresolved"] = "unresolved"
@@ -75,6 +80,7 @@ class Bulletin(BaseModel):
     unassociated_group_ptfs: list[str] = Field(default_factory=list)
     unassociated_apars: list[str] = Field(default_factory=list)
     affected_source_text: str = ""
+    change_status: Literal["new", "modified", "unchanged", "unknown"] = "unknown"
 
 
 class Finding(BaseModel):
@@ -123,7 +129,7 @@ class TriageMetrics(BaseModel):
 
 
 class TriageResult(BaseModel):
-    schema_version: str = "2.0"
+    schema_version: str = "2.1"
     job_id: str
     generated_at: str
     findings: list[Finding]
@@ -134,6 +140,7 @@ class TriageResult(BaseModel):
     feed_health: list[dict[str, Any]] = Field(default_factory=list)
     notes: list[str] = Field(default_factory=list)
     flagship_cve: str | None = None
+    previous_snapshot_at: str | None = None
 
 
 class ProgressEvent(BaseModel):

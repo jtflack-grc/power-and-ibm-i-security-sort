@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Bulletin, Finding } from "../types";
 import { extractPtfEvidence } from "../ptfEvidence";
 import { RemediationAssist } from "./RemediationAssist";
+import { InventoryComparison } from "./InventoryComparison";
 
 interface Props {
   finding: Finding | null;
@@ -12,6 +13,7 @@ export function VerificationRail({ finding, bulletin = null }: Props) {
   const frameRef = useRef<HTMLIFrameElement>(null);
   const channelTokenRef = useRef(crypto.randomUUID());
   const [showSources, setShowSources] = useState(false);
+  const [fullscreen, setFullscreen] = useState(false);
   const applicableRows = useMemo(
     () => (bulletin?.applicability ?? []).filter((row) => row.product_id && row.release_system && row.individual_ptfs.length),
     [bulletin]
@@ -57,8 +59,15 @@ export function VerificationRail({ finding, bulletin = null }: Props) {
     return () => window.removeEventListener("message", receive);
   }, [finding?.cve_id, hasPtfPath, ptfs, scenarioMeta]);
 
+  useEffect(() => {
+    if (!fullscreen) return;
+    const close = (event: KeyboardEvent) => { if (event.key === "Escape") setFullscreen(false); };
+    window.addEventListener("keydown", close);
+    return () => window.removeEventListener("keydown", close);
+  }, [fullscreen]);
+
   return (
-    <section className="verification-rail" aria-labelledby="verification-title">
+    <section className={`verification-rail ${fullscreen ? "verification-fullscreen" : ""}`} aria-labelledby="verification-title">
       <div className="verification-head">
         <div>
           <p className="verification-kicker">System verification</p>
@@ -72,6 +81,9 @@ export function VerificationRail({ finding, bulletin = null }: Props) {
             onClick={() => setShowSources((value) => !value)}
           >
             Sources &amp; boundary
+          </button>
+          <button type="button" className="verification-source-button" aria-pressed={fullscreen} onClick={() => setFullscreen((value) => !value)}>
+            {fullscreen ? "Exit full screen" : "Full screen"}
           </button>
           <span className="verification-state">
             {hasPtfPath ? "DSPPTF status validated" : "Guided evidence route"}
@@ -111,6 +123,7 @@ export function VerificationRail({ finding, bulletin = null }: Props) {
           </select>
         </label>
       )}
+      {!fullscreen && <InventoryComparison bulletin={bulletin} />}
       {hasPtfPath ? (
         <div className="verification-frame-wrap">
           <iframe

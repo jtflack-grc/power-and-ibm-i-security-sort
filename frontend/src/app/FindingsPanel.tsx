@@ -58,9 +58,11 @@ export function FindingsPanel({
   const [showAll, setShowAll] = useState(false);
   const [ptfOnly, setPtfOnly] = useState(false);
   const [releaseFilter, setReleaseFilter] = useState("all");
+  const [productFilter, setProductFilter] = useState("all");
   const [remedyFilter, setRemedyFilter] = useState("all");
   const [recentOnly, setRecentOnly] = useState(false);
   const [newOnly, setNewOnly] = useState(false);
+  const [snapshotChange, setSnapshotChange] = useState<"all" | "new" | "modified">("all");
   const [newBulletinIds, setNewBulletinIds] = useState<Set<string>>(new Set());
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const listRef = useRef<HTMLDivElement>(null);
@@ -135,6 +137,15 @@ export function FindingsPanel({
     () => [...new Set(bulletins.flatMap((bulletin) => bulletin.applicability.map((row) => row.release).filter(Boolean) as string[]))].sort(),
     [bulletins]
   );
+  const snapshotNewCount = useMemo(() => bulletins.filter((item) => item.change_status === "new").length, [bulletins]);
+  const snapshotModifiedCount = useMemo(() => bulletins.filter((item) => item.change_status === "modified").length, [bulletins]);
+  const productOptions = useMemo(() => {
+    const values = bulletins.flatMap((bulletin) => bulletin.applicability.map((row) => ({
+      value: `${row.product_id || "unknown"}|${row.component_type}`,
+      label: `${row.product_name}${row.product_id ? ` · ${row.product_id}` : ""} · ${row.component_type.replaceAll("_", " ")}`,
+    })));
+    return [...new Map(values.map((item) => [item.value, item])).values()].sort((a, b) => a.label.localeCompare(b.label));
+  }, [bulletins]);
   const visibleGroups = useMemo(() => {
     const groups = new Map<string, { id: string; title: string; published?: string | null; findings: Finding[] }>();
     for (const finding of visible) {
@@ -152,11 +163,13 @@ export function FindingsPanel({
     return [...groups.values()].filter((group) => {
       const bulletin = bulletinIndex.get(group.id);
       if (newOnly && !newBulletinIds.has(group.id)) return false;
+      if (snapshotChange !== "all" && bulletin?.change_status !== snapshotChange) return false;
       if (recentOnly) {
         const stamp = new Date(group.published || "").getTime();
         if (Number.isNaN(stamp) || Date.now() - stamp > 30 * 86_400_000) return false;
       }
       if (releaseFilter !== "all" && !bulletin?.applicability.some((row) => row.release === releaseFilter)) return false;
+      if (productFilter !== "all" && !bulletin?.applicability.some((row) => `${row.product_id || "unknown"}|${row.component_type}` === productFilter)) return false;
       if (remedyFilter === "all") return true;
       const steps = group.findings.flatMap((finding) => finding.resolution_steps ?? []);
       if (remedyFilter === "ptf") return steps.some((step) => step.kind === "ptf");
@@ -164,7 +177,7 @@ export function FindingsPanel({
       if (remedyFilter === "apar") return steps.some((step) => step.kind === "apar");
       return !steps.some((step) => ["ptf", "ptf_group", "apar"].includes(String(step.kind)));
     });
-  }, [visible, bulletinIndex, releaseFilter, remedyFilter, newOnly, newBulletinIds, recentOnly]);
+  }, [visible, bulletinIndex, releaseFilter, productFilter, remedyFilter, newOnly, newBulletinIds, snapshotChange, recentOnly]);
   const visibleGroupFindings = useMemo(() => visibleGroups.flatMap((group) => group.findings), [visibleGroups]);
 
   useEffect(() => {
@@ -265,11 +278,19 @@ export function FindingsPanel({
       </div>
       <div className="findings-focus-bar">
         <button type="button" className={`chip ${recentOnly ? "active" : ""}`} onClick={() => setRecentOnly((value) => !value)}>Recently published · 30d</button>
+        {snapshotNewCount > 0 && <button type="button" className={`chip ${snapshotChange === "new" ? "active" : ""}`} onClick={() => setSnapshotChange((value) => value === "new" ? "all" : "new")}>New snapshot ({snapshotNewCount})</button>}
+        {snapshotModifiedCount > 0 && <button type="button" className={`chip ${snapshotChange === "modified" ? "active" : ""}`} onClick={() => setSnapshotChange((value) => value === "modified" ? "all" : "modified")}>Remediation updated ({snapshotModifiedCount})</button>}
         {newBulletinIds.size > 0 && <button type="button" className={`chip ${newOnly ? "active" : ""}`} onClick={() => setNewOnly((value) => !value)}>New since last visit ({newBulletinIds.size})</button>}
         <label className="queue-select">Release
           <select value={releaseFilter} onChange={(event) => setReleaseFilter(event.target.value)}>
             <option value="all">All</option>
             {releaseOptions.map((value) => <option key={value} value={value}>{value}</option>)}
+          </select>
+        </label>
+        <label className="queue-select">Product/component
+          <select value={productFilter} onChange={(event) => setProductFilter(event.target.value)}>
+            <option value="all">All</option>
+            {productOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
           </select>
         </label>
         <label className="queue-select">Remedy
@@ -315,7 +336,7 @@ export function FindingsPanel({
               <div className="finding-top"><span className="cve-id">{group.findings.length} CVE{group.findings.length === 1 ? "" : "s"}</span><span className="score-pill">{lead.score.toFixed(0)}</span></div>
               <div className="finding-title">{group.title}</div>
               <div className="finding-meta">{published && <span>{published}</span>}<span>PSIRT bulletin</span><span>{isExpanded ? "Collapse" : "Expand"}</span></div>
-              <div className="badges"><span className={`badge ${lead.bucket}`}>{lead.bucket}</span>{group.findings.some((finding) => finding.on_kev) && <span className="badge kev">KEV</span>}{group.findings.some(hasPtfEvidence) && <span className="badge badge-ptf">PTF</span>}</div>
+              <div className="badges"><span className={`badge ${lead.bucket}`}>{lead.bucket}</span>{bulletinIndex.get(group.id)?.change_status === "new" && <span className="badge kev">New snapshot</span>}{bulletinIndex.get(group.id)?.change_status === "modified" && <span className="badge badge-ptf">Remediation updated</span>}{group.findings.some((finding) => finding.on_kev) && <span className="badge kev">KEV</span>}{group.findings.some(hasPtfEvidence) && <span className="badge badge-ptf">PTF</span>}</div>
             </button>
             {isExpanded && <div className="bulletin-cves">{group.findings.map((f) => {
               const selected = selectedId === f.cve_id;

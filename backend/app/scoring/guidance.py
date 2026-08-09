@@ -84,6 +84,26 @@ def _extract_table_remediation_rows(soup: BeautifulSoup, url: str) -> list[dict[
                 headers[index] if index < len(headers) and headers[index] else f"column_{index + 1}": value
                 for index, value in enumerate(cells)
             }
+            def tokens_for_headers(*needles: str) -> list[str]:
+                values = " ".join(
+                    value for header, value in columns.items()
+                    if any(needle in header for needle in needles)
+                )
+                return sorted({value.upper() for value in PTF_TOKEN_RE.findall(values)})
+
+            instruction_values = [
+                _sanitize(value, 500) for header, value in columns.items()
+                if any(marker in header for marker in ("ipl", "apply", "applic", "action", "instruction", "special"))
+                and value
+            ]
+            level_values = " ".join(
+                value for header, value in columns.items()
+                if "level" in header or "lvl" in header
+            )
+            level_match = re.search(r"\b(\d{1,4})\b", level_values)
+            group_levels = {
+                group: int(level_match.group(1)) for group in groups
+            } if level_match and len(groups) == 1 else {}
             rows.append({
                 "row_id": f"table-{table_index + 1}-row-{row_index + 1}",
                 "release": release,
@@ -91,7 +111,12 @@ def _extract_table_remediation_rows(soup: BeautifulSoup, url: str) -> list[dict[
                 "product_id": _row_product_id(text),
                 "individual_ptfs": ptfs,
                 "group_ptfs": groups,
+                "group_ptf_levels": group_levels,
                 "apars": sorted(set(apars)),
+                "prerequisite_ptfs": tokens_for_headers("prereq", "pre-req", "pre req"),
+                "corequisite_ptfs": tokens_for_headers("coreq", "co-req", "co req"),
+                "supersedes_ptfs": tokens_for_headers("supersed"),
+                "application_instructions": list(dict.fromkeys(instruction_values)),
                 "source_excerpt": text,
                 "source_columns": columns,
                 "source_url": url,
@@ -366,7 +391,12 @@ def attach_bulletin_remediation(
             target = matches[0]
             target.individual_ptfs = list(dict.fromkeys([*target.individual_ptfs, *remedy.get("individual_ptfs", [])]))
             target.group_ptfs = list(dict.fromkeys([*target.group_ptfs, *remedy.get("group_ptfs", [])]))
+            target.group_ptf_levels.update(remedy.get("group_ptf_levels", {}))
             target.apars = list(dict.fromkeys([*target.apars, *remedy.get("apars", [])]))
+            target.prerequisite_ptfs = list(dict.fromkeys([*target.prerequisite_ptfs, *remedy.get("prerequisite_ptfs", [])]))
+            target.corequisite_ptfs = list(dict.fromkeys([*target.corequisite_ptfs, *remedy.get("corequisite_ptfs", [])]))
+            target.supersedes_ptfs = list(dict.fromkeys([*target.supersedes_ptfs, *remedy.get("supersedes_ptfs", [])]))
+            target.application_instructions = list(dict.fromkeys([*target.application_instructions, *remedy.get("application_instructions", [])]))
             target.confidence = "structured"
             target.source_excerpt = remedy.get("source_excerpt") or target.source_excerpt
             associated_ptfs.update(target.individual_ptfs)

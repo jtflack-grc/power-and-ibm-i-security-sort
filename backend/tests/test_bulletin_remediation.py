@@ -51,3 +51,28 @@ def test_row_without_release_is_not_associated():
     row = _extract_table_remediation_rows(soup, "https://www.ibm.com/support/pages/node/1")[0]
     assert row["release"] is None
     assert row["confidence"] == "unresolved"
+
+
+def test_structured_instruction_columns_preserve_ptf_relationships():
+    soup = BeautifulSoup("""
+      <table>
+        <tr><th>Release</th><th>PTF</th><th>Prerequisite</th><th>Co-requisite</th><th>Supersedes</th><th>IPL action</th></tr>
+        <tr><td>7.5</td><td>SJ10925</td><td>SI80001</td><td>SI80002</td><td>SI70001</td><td>Delayed IPL required</td></tr>
+      </table>
+    """, "lxml")
+    row = _extract_table_remediation_rows(soup, "https://www.ibm.com/support/pages/node/1")[0]
+    assert row["prerequisite_ptfs"] == ["SI80001"]
+    assert row["corequisite_ptfs"] == ["SI80002"]
+    assert row["supersedes_ptfs"] == ["SI70001"]
+    assert row["application_instructions"] == ["Delayed IPL required"]
+
+
+def test_group_level_is_captured_only_from_structured_level_column():
+    soup = BeautifulSoup("""
+      <table>
+        <tr><th>Release</th><th>Group PTF</th><th>Level</th></tr>
+        <tr><td>7.5</td><td>SF99950</td><td>12</td></tr>
+      </table>
+    """, "lxml")
+    row = _extract_table_remediation_rows(soup, "https://www.ibm.com/support/pages/node/1")[0]
+    assert row["group_ptf_levels"] == {"SF99950": 12}

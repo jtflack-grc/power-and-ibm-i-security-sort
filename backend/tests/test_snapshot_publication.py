@@ -1,7 +1,8 @@
+import json
 from types import SimpleNamespace
 
 from app.models import Bulletin, Finding
-from app.scripts.refresh_live_snapshot import publication_safe
+from app.scripts.refresh_live_snapshot import annotate_snapshot_changes, publication_safe
 
 
 def _result(*, status: str = "ok", findings: int = 75, bulletins: int = 20):
@@ -33,3 +34,23 @@ def test_publication_gate_rejects_nvd_fallback():
 def test_publication_gate_rejects_materially_narrow_snapshot():
     assert publication_safe(_result(findings=74))[0] is False
     assert publication_safe(_result(bulletins=19))[0] is False
+
+
+def test_snapshot_change_annotation_distinguishes_new_and_modified(tmp_path):
+    unchanged = Bulletin(bulletin_id="same", url="https://www.ibm.com/support/pages/node/1", title="Same")
+    modified = Bulletin(bulletin_id="changed", url="https://www.ibm.com/support/pages/node/2", title="Updated")
+    new = Bulletin(bulletin_id="new", url="https://www.ibm.com/support/pages/node/3", title="New")
+    old_changed = modified.model_dump(mode="json")
+    old_changed["title"] = "Old title"
+    previous = {
+        "generated_at": "2026-08-08T12:00:00Z",
+        "bulletins": [unchanged.model_dump(mode="json"), old_changed],
+    }
+    path = tmp_path / "previous.json"
+    path.write_text(json.dumps(previous), encoding="utf-8")
+    result = SimpleNamespace(bulletins=[unchanged, modified, new], previous_snapshot_at=None)
+
+    annotate_snapshot_changes(result, path)
+
+    assert result.previous_snapshot_at == "2026-08-08T12:00:00Z"
+    assert [item.change_status for item in result.bulletins] == ["unchanged", "modified", "new"]

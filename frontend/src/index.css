@@ -775,6 +775,104 @@ a {
   border-bottom: 1px solid var(--line);
 }
 
+.case-workflow,
+.inventory-comparison {
+  border: 1px solid var(--line);
+  padding: 0.65rem 0.75rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.case-workflow summary,
+.inventory-comparison summary {
+  color: var(--white);
+  cursor: pointer;
+  font: 0.74rem "IBM Plex Mono", monospace;
+}
+
+.case-workflow-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.case-workflow-grid label {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.case-workflow-grid input,
+.case-workflow-grid select,
+.inventory-comparison textarea {
+  border: 1px solid var(--line);
+  background: #050706;
+  color: var(--white);
+  padding: 0.45rem;
+  font: 0.76rem "IBM Plex Mono", monospace;
+}
+
+.inventory-comparison {
+  margin: 0 0.9rem 0.75rem;
+}
+
+.inventory-comparison textarea {
+  display: block;
+  width: 100%;
+  resize: vertical;
+  margin: 0.6rem 0;
+}
+
+.inventory-file input {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+.inventory-results {
+  display: grid;
+  gap: 0.35rem;
+  margin-top: 0.6rem;
+}
+
+.inventory-result {
+  display: grid;
+  grid-template-columns: minmax(80px, 0.6fr) minmax(100px, 0.8fr) minmax(120px, 1fr);
+  gap: 0.5rem;
+  border-left: 2px solid var(--amber);
+  padding: 0.4rem 0.55rem;
+  background: rgba(212, 160, 69, 0.05);
+}
+
+.inventory-result.observed { border-left-color: var(--green); }
+
+.verification-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: #020403;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+}
+
+.verification-fullscreen .verification-frame-wrap {
+  min-height: 0;
+  flex: 1 1 auto;
+}
+
+button:focus-visible,
+a:focus-visible,
+summary:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+iframe:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 2px;
+}
+
 .issue-links a {
   font-size: 0.8rem;
   font-family: "IBM Plex Mono", monospace;
@@ -1257,6 +1355,10 @@ a {
 }
 
 @media (max-width: 700px) {
+  .case-workflow-grid,
+  .inventory-result {
+    grid-template-columns: 1fr;
+  }
   .overlay {
     place-items: start center;
     padding: 0.75rem;
