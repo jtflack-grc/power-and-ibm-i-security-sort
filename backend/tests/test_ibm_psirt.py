@@ -52,3 +52,24 @@ def test_nvd_enriches_but_cannot_add_a_finding():
     assert merged["CVE-2026-10001"].cvss_score == 9.8
     assert merged["CVE-2026-10001"].cwes == ["CWE-79"]
     assert merged["CVE-2026-10001"].platforms[0].match_strength == "cpe"
+
+
+def test_psirt_can_apply_a_bulletin_publication_window():
+    payload = {"results": [
+        {
+            "title": "Current IBM i bulletin CVE-2026-10001",
+            "field_product": "IBM i",
+            "field_affected_products": "IBM i 7.6",
+            "field_pub_date": "2026-01-02",
+            "field_published_url": "https://www.ibm.com/support/pages/node/1",
+        },
+        {
+            "title": "Archived IBM i bulletin CVE-2020-10001",
+            "field_product": "IBM i",
+            "field_affected_products": "IBM i 7.3",
+            "field_pub_date": "2020-01-02",
+            "field_published_url": "https://www.ibm.com/support/pages/node/2",
+        },
+    ]}
+    findings = parse_psirt_payload(payload, published_after="2025-01-01")
+    assert set(findings) == {"CVE-2026-10001"}

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+from datetime import datetime, timedelta, timezone
 from html.parser import HTMLParser
 from typing import Any
 from urllib.parse import urlparse
@@ -77,7 +78,9 @@ def _records(payload: Any) -> list[dict[str, Any]]:
     return [row for row in rows[:_MAX_RESULTS] if isinstance(row, dict)]
 
 
-def parse_psirt_payload(payload: Any) -> dict[str, Finding]:
+def parse_psirt_payload(
+    payload: Any, *, published_after: str | None = None
+) -> dict[str, Finding]:
     """Expand IBM bulletin search records into one authoritative row per CVE."""
     findings: dict[str, Finding] = {}
     for record in _records(payload):
@@ -95,6 +98,9 @@ def parse_psirt_payload(payload: Any) -> dict[str, Finding]:
         url = _support_url(record.get("field_published_url"))
         if not url:
             continue
+        published = _date(record.get("field_pub_date") or record.get("field_created"))
+        if published_after and (not published or published < published_after):
+            continue
         searchable = " ".join(str(v or "") for v in record.values())
         cves = list(dict.fromkeys(c.upper() for c in _CVE_RE.findall(searchable)))
         for cve_id in cves:
@@ -105,7 +111,7 @@ def parse_psirt_payload(payload: Any) -> dict[str, Finding]:
                 cve_id=cve_id,
                 title=title,
                 description=description,
-                published=_date(record.get("field_pub_date") or record.get("field_created")),
+                published=published,
                 last_modified=_date(
                     record.get("field_modified_date") or record.get("field_updated")
                 ),
@@ -129,12 +135,13 @@ def parse_psirt_payload(payload: Any) -> dict[str, Finding]:
 
 
 async def collect_ibmi_psirt(
-    client: httpx.AsyncClient, cache: DiskCache
+    client: httpx.AsyncClient, cache: DiskCache, *, days_back: int = 400
 ) -> dict[str, Finding]:
     cache_key = "ibm_psirt:ibm-i:v1"
     cached = cache.get(cache_key)
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=max(1, days_back))).date().isoformat()
     if cached is not None:
-        return parse_psirt_payload(cached)
+        return parse_psirt_payload(cached, published_after=cutoff)
 
     body = bytearray()
     async with client.stream(
@@ -163,7 +170,7 @@ async def collect_ibmi_psirt(
     if not isinstance(payload, dict) or not isinstance(payload.get("results"), list):
         raise ValueError("IBM PSIRT search returned an unexpected response shape")
     cache.set(cache_key, payload)
-    return parse_psirt_payload(payload)
+    return parse_psirt_payload(payload, published_after=cutoff)
 
 
 def enrich_psirt_from_nvd(

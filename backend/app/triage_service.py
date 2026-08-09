@@ -71,8 +71,8 @@ def _curation_order(result_findings: list[Any]) -> list[Any]:
     return sorted(
         result_findings,
         key=lambda finding: (
-            0 if finding.on_kev else 1,
             -published_value(finding),
+            0 if finding.on_kev else 1,
             -(finding.score or 0),
         ),
     )
