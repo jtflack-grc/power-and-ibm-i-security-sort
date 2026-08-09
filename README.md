@@ -24,7 +24,7 @@ Front door: [jtflack-grc.github.io/portfolio](https://jtflack-grc.github.io/port
 
 ## What it does
 
-1. Pulls **CISA KEV**, **NVD**, **FIRST EPSS**, maps **OWASP Top 10** via CWE, resolves **IBM Security Bulletins** when possible
+1. Discovers IBM i issues from **IBM Product Security Central / PSIRT**, then enriches that IBM-curated set with **CISA KEV**, **NVD**, **FIRST EPSS**, and **OWASP Top 10** via CWE
 2. Scores with up *and* down counter-levers ([`backend/app/scoring/ranker.py`](backend/app/scoring/ranker.py))
 3. Distinguishes IBM i-native from supply-chain / TPRM surface
 4. Builds Resolve + Interim cards (including Fix Central / support search when scrape is thin)
@@ -62,7 +62,7 @@ KEV escalates hard. EPSS can raise *or* temper high CVSS. OWASP is context, not 
 
 ## Security / no-keys stance
 
-- **Published feeds are the Pages default.** A daily GitHub Action pulls public CISA / NVD / FIRST / IBM intel and ships `live-triage.json` inside the static site. No open triage API. No keys in the SPA.
+- **Published feeds are the Pages default.** A daily GitHub Action uses IBM PSIRT as the discovery authority, enriches those findings from public CISA / NVD / FIRST data, and ships `live-triage.json` inside the static site. No open triage API. No keys in the SPA.
 - **Sample remains the offline fallback.** `frontend/public/sample-triage.json` ships for walkthroughs when the snapshot step fails or you want the flagship story.
 - **Shop context stays in the browser** (`sessionStorage`). Personas and answers never POST to a server.
 - **On-demand live feeds are local/Docker only** (FastAPI). They call the same public sources. Optional `NVD_API_KEY` may be set as a **repo Actions secret** for fuller scheduled NVD pulls, or in the local shell — never embedded in a public deploy.
