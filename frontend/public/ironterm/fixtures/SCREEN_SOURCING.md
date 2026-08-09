@@ -11,7 +11,7 @@ must not be collapsed:
 
 | Screen | LCL starting point | IBM evidence | Fixture decision |
 |---|---|---|---|
-| WRKPTFGRP | Strong structural candidate | Command, behavior, and IBM-hosted screenshots identified | Hold for image/layout comparison |
+| WRKPTFGRP | Strong structural candidate | Complete IBM Redbook initial/F11 panels plus current command and support behavior | Hold for modern-release comparison and John visual acceptance |
 | DSPPTFGRP | Strong structural candidate | Navigation, F19, F6, and status behavior identified | Hold for full-panel capture |
 | Display PTF Status | Missing as a distinct LCL panel | Two IBM technotes contain preformatted screen output | Ready to encode |
 | Display PTF Details menu | LCL currently skips it | IBM confirms the menu and option 1 | Hold for full-panel capture |
@@ -34,6 +34,16 @@ DSPPTF LICPGM(...) SELECT(...)
 The Curator fixtures will implement the separated IBM flow. LCL content may
 supply synthetic values and candidate coordinates, but it will not be treated
 as proof of IBM's actual navigation.
+
+## WRKPTFGRP source breakthrough
+
+IBM Redbook SG24-7311 pages 18–19 publishes complete preformatted 24x80 text for
+both the initial Work with PTF Groups panel and its F11 description view. It
+establishes the option legend, group/level/status and group/text columns, example
+row placement, Bottom marker, and F3/F6/F11/F12/F22 labels. Because the example
+is from the i5/OS V5R3 era, it is strong coordinate evidence but not sufficient
+by itself to claim an unchanged IBM i 7.4–7.6 panel. The remaining gate is a
+modern clean capture comparison and John Flack's visual acceptance.
 
 ## First fixture to build
 

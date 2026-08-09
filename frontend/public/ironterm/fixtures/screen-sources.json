@@ -33,6 +33,13 @@
       "sources": [
         {
           "tier": "A",
+          "title": "IBM Redbook SG24-7311 — WRKPTFGRP initial and F11 description displays",
+          "url": "https://www.redbooks.ibm.com/redbooks/pdfs/sg247311.pdf#page=33",
+          "supports": ["complete preformatted 24x80 initial panel", "option legend", "group/level/status columns", "F3/F6/F11/F12/F22 labels", "complete F11 description view"],
+          "scopeNote": "The captured example is i5/OS V5R3-era. Treat it as coordinate evidence only after comparison with a current IBM i display."
+        },
+        {
+          "tier": "A",
           "title": "IBM i 7.4 — Work with PTF Groups command",
           "url": "https://www.ibm.com/docs/en/i/7.4.0?topic=w-work-program-temporary-fix-groups",
           "supports": ["command purpose", "parameters", "group level semantics", "authority"]
@@ -74,7 +81,7 @@
           "supports": ["field coordinates", "input option field", "paging behavior"]
         }
       ],
-      "remainingGate": "Capture the three IBM-hosted WRKPTFGRP images at original resolution and compare row/column placement and full option legend with LCL."
+      "remainingGate": "Compare the Redbook's complete preformatted panels with a current IBM i 7.4/7.5/7.6 capture, encode both initial and F11 views, and obtain John Flack visual acceptance before enabling the fixture."
     },
     {
       "id": "DSPPTFGRP",
