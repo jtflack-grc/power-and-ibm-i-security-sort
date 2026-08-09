@@ -378,11 +378,11 @@ def apply_levers(finding: Finding, cfg: RankerConfig | None = None) -> Finding:
             )
 
     # --- Freshness vs stale-without-signal ---
-    # Recent boost may use last_modified (NVD churn). Museum / stale demotion must
-    # use *published* age — otherwise 2009 CVEs with 2026 last_modified look "fresh".
+    # Operational freshness uses publication age. NVD bulk-maintenance churn must
+    # not make a 2021 CVE look like a newly disclosed 2026 issue.
     now = datetime.now(timezone.utc)
     published_dt = _parse_dt(finding.published)
-    activity_dt = _parse_dt(finding.last_modified) or published_dt
+    activity_dt = published_dt
     if activity_dt is not None:
         activity_days = max(0, (now - activity_dt).days)
         if activity_days <= cfg.recent_days:
@@ -392,7 +392,7 @@ def apply_levers(finding: Finding, cfg: RankerConfig | None = None) -> Finding:
                     source="NVD chronology",
                     direction=LeverDirection.UP,
                     weight=cfg.recent_boost,
-                    reason=f"Published/modified within {cfg.recent_days} days ({activity_days}d).",
+                    reason=f"Published within {cfg.recent_days} days ({activity_days}d).",
                     evidence={"age_days": activity_days},
                 )
             )

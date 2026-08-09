@@ -59,6 +59,24 @@ def load_last_live() -> TriageResult | None:
         return None
 
 
+def _curation_order(result_findings: list[Any]) -> list[Any]:
+    """Lead with new disclosures; retain risk score as the within-day tie-breaker."""
+    def published_value(finding: Any) -> float:
+        try:
+            return datetime.fromisoformat(str(finding.published).replace("Z", "+00:00")).timestamp()
+        except (TypeError, ValueError):
+            return 0.0
+
+    return sorted(
+        result_findings,
+        key=lambda finding: (
+            0 if finding.on_kev else 1,
+            -published_value(finding),
+            -(finding.score or 0),
+        ),
+    )
+
+
 class TriageJobStore:
     def __init__(self) -> None:
         self._events: dict[str, list[ProgressEvent]] = {}
@@ -415,6 +433,7 @@ async def build_live_result(
             )
             notes.append("Bulletin scrape degraded — Fix Central / search steps still attached.")
         annotate_surfaces(ranked)
+        ranked = _curation_order(ranked)
         metrics = build_metrics(ranked)
         result = TriageResult(
             job_id=job_id,
