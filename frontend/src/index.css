@@ -359,7 +359,7 @@ a {
 .command-coach-steps {
   display: grid;
   grid-template-columns: 1.2fr 1fr 1fr;
-  min-height: 142px;
+  min-height: 118px;
   border: 1px solid var(--line);
   background: #050706;
 }
@@ -772,6 +772,50 @@ a {
   display: grid;
   gap: 0.45rem;
   padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.issue-accordions {
+  display: grid;
+  border: 1px solid var(--line);
+}
+
+.issue-accordion-toggle {
+  display: grid;
+  gap: 0.2rem;
+  width: 100%;
+  padding: 0.75rem 0.8rem;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  color: var(--white);
+  text-align: left;
+  cursor: pointer;
+}
+
+.issue-accordion-toggle span {
+  color: var(--green);
+  font: 0.65rem "IBM Plex Mono", monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.issue-accordion-toggle strong {
+  overflow: hidden;
+  font-size: 0.86rem;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.issue-accordion-toggle[aria-expanded="true"] {
+  background: color-mix(in srgb, var(--green) 8%, transparent);
+}
+
+.issue-accordion-body {
+  display: grid;
+  gap: 0.7rem;
+  padding: 0.8rem;
   border-bottom: 1px solid var(--line);
 }
 
@@ -1912,6 +1956,10 @@ iframe:focus-visible {
   border-bottom: 1px solid var(--line);
 }
 
+.verification-head-compact {
+  padding-block: 0.65rem;
+}
+
 .verification-head-actions {
   display: flex;
   align-items: center;
@@ -2042,20 +2090,20 @@ iframe:focus-visible {
   overflow: hidden;
 }
 
-.sql-evidence-toggle {
-  width: 100%;
+.sql-evidence-actions {
   display: grid;
-  gap: 0.2rem;
-  padding: 0.9rem 1rem;
-  border: 0;
-  background: transparent;
-  color: var(--white);
-  text-align: left;
-  font: inherit;
-  cursor: pointer;
+  grid-template-columns: minmax(150px, 1fr) repeat(3, auto);
+  gap: 0.45rem;
+  align-items: center;
+  padding: 0.7rem;
 }
 
-.sql-evidence-toggle span,
+.sql-evidence-actions > div {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.sql-evidence-actions span,
 .sql-evidence-grid article > p {
   color: var(--green);
   font-size: 0.72rem;
@@ -2063,13 +2111,22 @@ iframe:focus-visible {
   text-transform: uppercase;
 }
 
-.sql-evidence-toggle strong {
-  font-size: 0.92rem;
+.sql-evidence-actions strong {
+  font-size: 0.84rem;
 }
 
-.sql-evidence-toggle:hover strong,
-.sql-evidence-toggle[aria-expanded="true"] strong {
+.sql-evidence-actions button {
+  border: 1px solid var(--green);
+  background: transparent;
   color: var(--green);
+  padding: 0.45rem 0.55rem;
+  font: 0.68rem "IBM Plex Mono", monospace;
+  cursor: pointer;
+}
+
+.sql-evidence-actions button:hover {
+  background: var(--green);
+  color: #000;
 }
 
 .sql-evidence-body {
@@ -2115,6 +2172,8 @@ iframe:focus-visible {
 
 @media (max-width: 760px) {
   .sql-evidence-grid { grid-template-columns: 1fr; }
+  .sql-evidence-actions { grid-template-columns: 1fr 1fr; }
+  .sql-evidence-actions > div { grid-column: 1 / -1; }
 }
 
 .verification-assist-wrap {

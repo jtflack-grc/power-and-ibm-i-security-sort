@@ -24,10 +24,9 @@ interface Props {
   mode: Mode;
   onClose: () => void;
   onReplayIntro?: () => void;
-  onStartIntake?: () => void;
 }
 
-export function AboutOverlay({ mode, onClose, onReplayIntro, onStartIntake }: Props) {
+export function AboutOverlay({ mode, onClose, onReplayIntro }: Props) {
   const isIntro = mode === "intro";
   const dialogRef = useRef<HTMLDivElement>(null);
 
@@ -41,12 +40,6 @@ export function AboutOverlay({ mode, onClose, onReplayIntro, onStartIntake }: Pr
   const enter = () => {
     markIntroSeen();
     onClose();
-  };
-
-  const route = () => {
-    markIntroSeen();
-    onClose();
-    onStartIntake?.();
   };
 
   return (
@@ -97,7 +90,7 @@ export function AboutOverlay({ mode, onClose, onReplayIntro, onStartIntake }: Pr
               <section>
                 <span className="welcome-rail-number">01</span>
                 <h2>Findings</h2>
-                <p>Start with IBM&apos;s newest published issues. Filters and shop context help narrow the queue.</p>
+                <p>Start with IBM&apos;s newest published issues and narrow the queue with direct filters.</p>
               </section>
               <section>
                 <span className="welcome-rail-number">02</span>
@@ -121,17 +114,12 @@ export function AboutOverlay({ mode, onClose, onReplayIntro, onStartIntake }: Pr
             </div>
             <p className="welcome-honesty">
               This is a decision and evidence companion, not a scanner of record, Fix Central,
-              or a live connection to an IBM i partition. Optional shop answers stay in this tab.
+              or a live connection to an IBM i partition.
             </p>
             <div className="welcome-actions">
               <button type="button" className="button button-primary" onClick={enter}>
                 Enter current queue
               </button>
-              {onStartIntake && (
-                <button type="button" className="button" onClick={route}>
-                  Route for my shop first
-                </button>
-              )}
             </div>
           </>
         ) : (
@@ -162,7 +150,7 @@ export function AboutOverlay({ mode, onClose, onReplayIntro, onStartIntake }: Pr
               </li>
             </ul>
             <p className="welcome-honesty">
-              Shop answers and optional PSP paste stay in this browser tab only.
+              Public-feed evidence remains in this browser tab only.
             </p>
             <div className="welcome-actions">
               <a

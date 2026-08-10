@@ -10,15 +10,8 @@ import {
   startTriage,
   subscribeProgress,
 } from "./api";
-import { GuidedIntake } from "./app/GuidedIntake";
 import { AboutOverlay, hasSeenIntro } from "./app/AboutOverlay";
 import { Layout } from "./app/Layout";
-import {
-  applyShopContext,
-  loadShopContext,
-  saveShopContext,
-  type ShopContext,
-} from "./shopContext";
 import type { ProgressEvent, TriageResult } from "./types";
 import "./index.css";
 
@@ -33,28 +26,17 @@ export default function App() {
   const [progress, setProgress] = useState<ProgressEvent[]>([]);
   const [liveStartedAt, setLiveStartedAt] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [showIntake, setShowIntake] = useState(false);
   const [showIntro, setShowIntro] = useState(() => !hasSeenIntro());
   const [showCredits, setShowCredits] = useState(false);
   const [backendAvailable, setBackendAvailable] = useState(false);
   const [publishedAvailable, setPublishedAvailable] = useState(false);
-  const [shop, setShop] = useState<ShopContext>(() => loadShopContext());
   const liveJobRef = useRef<string | null>(null);
   const stopLiveRef = useRef<(() => void) | null>(null);
   const rawResultRef = useRef<TriageResult | null>(null);
   const bootStartedRef = useRef(false);
   rawResultRef.current = rawResult;
 
-  const feedsPreferred = backendAvailable || publishedAvailable;
-
-  useEffect(() => {
-    saveShopContext(shop);
-  }, [shop]);
-
-  const result = useMemo(
-    () => (rawResult ? applyShopContext(rawResult, shop) : null),
-    [rawResult, shop]
-  );
+  const result = useMemo(() => rawResult, [rawResult]);
 
   const onPublished = useCallback(async () => {
     setError(null);
@@ -356,33 +338,14 @@ export default function App() {
     setPendingLiveResult(null);
   }, []);
 
-  const startIntake = useCallback(() => {
-    setError(null);
-    setShowCredits(false);
-    setShowIntro(false);
-    setShowIntake(true);
-  }, []);
-
   const openCredits = useCallback(() => {
-    setShowIntake(false);
     setShowIntro(false);
     setShowCredits(true);
   }, []);
 
   const replayIntro = useCallback(() => {
     setShowCredits(false);
-    setShowIntake(false);
     setShowIntro(true);
-  }, []);
-
-  const finishIntake = useCallback((ctx: ShopContext) => {
-    setShop(ctx);
-    setShowIntake(false);
-  }, []);
-
-  const skipIntake = useCallback(() => {
-    setShop((prev) => ({ ...prev, enabled: false, routed: true, paste: null }));
-    setShowIntake(false);
   }, []);
 
   return (
@@ -404,9 +367,6 @@ export default function App() {
         onDismissPending={dismissPending}
         backendAvailable={backendAvailable}
         publishedAvailable={publishedAvailable}
-        shop={shop}
-        onShopChange={setShop}
-        onStartIntake={startIntake}
         onOpenCredits={openCredits}
         liveError={error}
         onClearError={() => setError(null)}
@@ -415,7 +375,6 @@ export default function App() {
         <AboutOverlay
           mode="intro"
           onClose={() => setShowIntro(false)}
-          onStartIntake={startIntake}
         />
       )}
       {showCredits && (
@@ -423,14 +382,6 @@ export default function App() {
           mode="credits"
           onClose={() => setShowCredits(false)}
           onReplayIntro={replayIntro}
-        />
-      )}
-      {showIntake && (
-        <GuidedIntake
-          initial={shop}
-          livePreferred={feedsPreferred}
-          onComplete={finishIntake}
-          onSkip={skipIntake}
         />
       )}
       {error && result && (
