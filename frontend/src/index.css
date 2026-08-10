@@ -2035,21 +2035,27 @@ iframe:focus-visible {
 }
 
 .sql-evidence-route {
-  margin-top: 0.85rem;
+  margin: 0 0.9rem 0.75rem;
   border: 1px solid var(--line);
   border-radius: 12px;
   background: color-mix(in srgb, var(--panel) 88%, #000);
   overflow: hidden;
 }
 
-.sql-evidence-route summary {
+.sql-evidence-toggle {
+  width: 100%;
   display: grid;
   gap: 0.2rem;
   padding: 0.9rem 1rem;
+  border: 0;
+  background: transparent;
+  color: var(--white);
+  text-align: left;
+  font: inherit;
   cursor: pointer;
 }
 
-.sql-evidence-route summary span,
+.sql-evidence-toggle span,
 .sql-evidence-grid article > p {
   color: var(--green);
   font-size: 0.72rem;
@@ -2057,8 +2063,18 @@ iframe:focus-visible {
   text-transform: uppercase;
 }
 
-.sql-evidence-route summary strong {
+.sql-evidence-toggle strong {
   font-size: 0.92rem;
+}
+
+.sql-evidence-toggle:hover strong,
+.sql-evidence-toggle[aria-expanded="true"] strong {
+  color: var(--green);
+}
+
+.sql-evidence-body {
+  padding-bottom: 0.1rem;
+  border-top: 1px solid var(--line);
 }
 
 .sql-evidence-grid {
@@ -2090,7 +2106,7 @@ iframe:focus-visible {
   line-height: 1.55;
 }
 
-.sql-evidence-route > a {
+.sql-evidence-body > a {
   display: inline-block;
   margin: 0 0 0.9rem 1rem;
   color: var(--green);
