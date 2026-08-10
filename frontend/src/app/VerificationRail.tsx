@@ -13,6 +13,7 @@ export function VerificationRail({ finding, bulletin = null }: Props) {
   const frameRef = useRef<HTMLIFrameElement>(null);
   const channelTokenRef = useRef(crypto.randomUUID());
   const [showSources, setShowSources] = useState(false);
+  const [showSql, setShowSql] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
   const applicableRows = useMemo(
     () => (bulletin?.applicability ?? []).filter((row) =>
@@ -42,8 +43,8 @@ export function VerificationRail({ finding, bulletin = null }: Props) {
   const [terminalScenario, setTerminalScenario] = useState<"dspptf-status" | "wrkptfgrp">("dspptf-status");
 
   useEffect(() => {
-    setTerminalScenario(hasPtfPath ? "dspptf-status" : "wrkptfgrp");
-  }, [finding?.cve_id, applicabilityId, hasPtfPath]);
+    setTerminalScenario(hasGroupPath ? "wrkptfgrp" : "dspptf-status");
+  }, [finding?.cve_id, applicabilityId, hasGroupPath]);
 
   useEffect(() => {
     const load = () => {
@@ -146,6 +147,53 @@ export function VerificationRail({ finding, bulletin = null }: Props) {
               <button type="button" aria-pressed={terminalScenario === "wrkptfgrp"} onClick={() => setTerminalScenario("wrkptfgrp")}>PTF groups</button>
             </div>
           )}
+          {!fullscreen && (
+            <section className="sql-evidence-route" aria-label="SQL evidence engineering route">
+              <button
+                type="button"
+                className="sql-evidence-toggle"
+                aria-expanded={showSql}
+                onClick={() => setShowSql((value) => !value)}
+              >
+                <span>Evidence engineering route</span>
+                <strong>{showSql ? "Hide IBM i SQL services" : "Show IBM i SQL services"}</strong>
+              </button>
+              {showSql && (
+                <div className="sql-evidence-body">
+                  <div className="sql-evidence-grid">
+                    <article>
+                      <p>Group PTF evidence</p>
+                      <pre><code>{`SELECT PTF_GROUP_NAME,
+       PTF_GROUP_DESCRIPTION,
+       PTF_GROUP_LEVEL,
+       PTF_GROUP_STATUS,
+       PTF_GROUP_TARGET_RELEASE
+  FROM QSYS2.GROUP_PTF_INFO
+ ORDER BY PTF_GROUP_NAME,
+          PTF_GROUP_LEVEL DESC;`}</code></pre>
+                    </article>
+                    <article>
+                      <p>Individual PTF evidence</p>
+                      <pre><code>{`SELECT PTF_IDENTIFIER,
+       PTF_PRODUCT_ID,
+       PTF_PRODUCT_RELEASE_LEVEL,
+       PTF_LOADED_STATUS,
+       PTF_IPL_ACTION,
+       PTF_ACTION_PENDING,
+       PTF_IPL_REQUIRED
+  FROM QSYS2.PTF_INFO
+ ORDER BY PTF_IDENTIFIER;`}</code></pre>
+                    </article>
+                  </div>
+                  <p className="sql-evidence-note">
+                    Run through ACS Run SQL Scripts or your approved Db2 for i client. Export sanitized results and retain the query, collection timestamp, partition identity, and job identity with the evidence packet.
+                  </p>
+                  <a href="https://www.ibm.com/docs/en/i/7.4.0?topic=services-group-ptf-info-view" target="_blank" rel="noreferrer">IBM GROUP_PTF_INFO reference ↗</a>
+                  <a href="https://www.ibm.com/docs/en/i/7.4.0?topic=services-ptf-info-view" target="_blank" rel="noreferrer">IBM PTF_INFO reference ↗</a>
+                </div>
+              )}
+            </section>
+          )}
           <div className="verification-frame-wrap">
             <iframe
               ref={frameRef}
@@ -156,44 +204,6 @@ export function VerificationRail({ finding, bulletin = null }: Props) {
               referrerPolicy="no-referrer"
             />
           </div>
-          {!fullscreen && (
-            <details className="sql-evidence-route">
-              <summary>
-                <span>Evidence engineering route</span>
-                <strong>Collect the same state with IBM i SQL services</strong>
-              </summary>
-              <div className="sql-evidence-grid">
-                <article>
-                  <p>Group PTF evidence</p>
-                  <pre><code>{`SELECT PTF_GROUP_NAME,
-       PTF_GROUP_DESCRIPTION,
-       PTF_GROUP_LEVEL,
-       PTF_GROUP_STATUS,
-       PTF_GROUP_TARGET_RELEASE
-  FROM QSYS2.GROUP_PTF_INFO
- ORDER BY PTF_GROUP_NAME,
-          PTF_GROUP_LEVEL DESC;`}</code></pre>
-                </article>
-                <article>
-                  <p>Individual PTF evidence</p>
-                  <pre><code>{`SELECT PTF_IDENTIFIER,
-       PTF_PRODUCT_ID,
-       PTF_PRODUCT_RELEASE_LEVEL,
-       PTF_LOADED_STATUS,
-       PTF_IPL_ACTION,
-       PTF_ACTION_PENDING,
-       PTF_IPL_REQUIRED
-  FROM QSYS2.PTF_INFO
- ORDER BY PTF_IDENTIFIER;`}</code></pre>
-                </article>
-              </div>
-              <p className="sql-evidence-note">
-                Run through ACS Run SQL Scripts or your approved Db2 for i client. Export sanitized results and retain the query, collection timestamp, partition identity, and job identity with the evidence packet.
-              </p>
-              <a href="https://www.ibm.com/docs/en/i/7.4.0?topic=services-group-ptf-info-view" target="_blank" rel="noreferrer">IBM GROUP_PTF_INFO reference ↗</a>
-              <a href="https://www.ibm.com/docs/en/i/7.4.0?topic=services-ptf-info-view" target="_blank" rel="noreferrer">IBM PTF_INFO reference ↗</a>
-            </details>
-          )}
         </>
       ) : (
         <div className="verification-frame-wrap verification-assist-wrap">
