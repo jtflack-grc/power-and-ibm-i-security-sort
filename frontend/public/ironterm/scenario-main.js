@@ -6,6 +6,7 @@ import { Aid, Models } from "./tn5250/src/proto/Constants.js";
 import { Renderer } from "./tn5250/src/ui/Renderer.js";
 import { InputController } from "./tn5250/src/ui/InputController.js";
 import { DSPPTF_STATUS, buildDspptfStatusRecords } from "./fixtures/dspptf-status.js";
+import { WRKPTFGRP, buildWrkptfgrpRecords } from "./fixtures/wrkptfgrp.js";
 
 const canvas = document.querySelector("#screen");
 const status = document.querySelector("#status");
@@ -19,6 +20,33 @@ const MAX_RECORDS = 4;
 const MAX_RECORD_BYTES = 16_384;
 let channelToken = null;
 let activePtfs = [];
+let activeGroups = [];
+let activeScenario = null;
+let groupDescriptionView = false;
+
+function renderActiveScenario() {
+  const records = activeScenario === WRKPTFGRP
+    ? buildWrkptfgrpRecords({ system: "CURATOR", groups: activeGroups, descriptionView: groupDescriptionView })
+    : buildDspptfStatusRecords(activeScenario);
+  if (
+    records.length === 0 ||
+    records.length > MAX_RECORDS ||
+    records.some((record) => !Array.isArray(record) || record.length > MAX_RECORD_BYTES)
+  ) throw new Error("Scenario fixture exceeds terminal safety limits");
+  screen.clearUnit();
+  for (const record of records) parser.process(Uint8Array.from(record));
+  if (screen.pendingCursor >= 0) {
+    screen.cursor = screen.pendingCursor;
+    screen.pendingCursor = -1;
+  } else {
+    const first = screen.firstFocusable();
+    if (first !== null) screen.cursor = first;
+  }
+  screen.keyboardLocked = false;
+  empty.classList.add("hidden");
+  status.textContent = "";
+  draw();
+}
 
 function draw() {
   renderer.draw();
@@ -39,6 +67,11 @@ function emitAid(aid) {
     draw();
     return;
   }
+  if (aid === Aid.PF11 && activeScenario === WRKPTFGRP) {
+    groupDescriptionView = !groupDescriptionView;
+    renderActiveScenario();
+    return;
+  }
   const response = builder.buildAidResponse(aid);
   window.parent.postMessage({
     type: "ironterm:aid",
@@ -50,7 +83,7 @@ function emitAid(aid) {
     screen.clearUnit();
     screen.keyboardLocked = true;
     empty.classList.remove("hidden");
-    empty.querySelector("strong").textContent = aid === Aid.PF3 ? "DSPPTF exited" : "DSPPTF cancelled";
+    empty.querySelector("strong").textContent = aid === Aid.PF3 ? "PTF display exited" : "PTF display cancelled";
     empty.querySelector("span").textContent = "Choose another finding to begin a new verification scenario.";
     status.textContent = aid === Aid.PF3 ? "EXIT" : "CANCEL";
     draw();
@@ -66,10 +99,11 @@ function emitAid(aid) {
       }))
       .find((field) => field.value === "5");
     if (selected) {
-      status.textContent = `${activePtfs[selected.index] || "PTF"}: OPTION 5 DESTINATION CAPTURE REQUIRED`;
+      const selectedId = activeScenario === WRKPTFGRP ? activeGroups[selected.index] : activePtfs[selected.index];
+      status.textContent = `${selectedId || (activeScenario === WRKPTFGRP ? "PTF GROUP" : "PTF")}: OPTION 5 DESTINATION CAPTURE REQUIRED`;
       screen.alarm = true;
     } else {
-      status.textContent = "TYPE 5 BESIDE A PTF, THEN PRESS ENTER";
+      status.textContent = `TYPE 5 BESIDE A ${activeScenario === WRKPTFGRP ? "PTF GROUP" : "PTF"}, THEN PRESS ENTER`;
       screen.alarm = true;
     }
     screen.keyboardLocked = false;
@@ -104,35 +138,25 @@ new InputController({
 });
 
 function loadScenario(message) {
-  if (message.scenario !== DSPPTF_STATUS) return;
+  if (message.scenario !== DSPPTF_STATUS && message.scenario !== WRKPTFGRP) return;
   if (typeof message.channelToken !== "string" || message.channelToken.length > 64) return;
-  if (!Array.isArray(message.ptfs) || message.ptfs.length === 0 || message.ptfs.length > 7) return;
-  const ptfs = message.ptfs.map((value) => String(value).toUpperCase());
+  const ptfs = Array.isArray(message.ptfs) ? message.ptfs.map((value) => String(value).toUpperCase()) : [];
+  const groups = Array.isArray(message.groups) ? message.groups.map((value) => String(value).toUpperCase()) : [];
+  if (message.scenario === DSPPTF_STATUS && (ptfs.length === 0 || ptfs.length > 7)) return;
+  if (message.scenario === WRKPTFGRP && (groups.length === 0 || groups.length > 7)) return;
   if (ptfs.some((value) => !/^[A-Z]{2}\d{5,7}$/.test(value))) return;
+  if (groups.some((value) => !/^SF\d{5}$/.test(value))) return;
   const productId = String(message.productId ?? "").toUpperCase();
   const release = String(message.release ?? "").toUpperCase();
-  if (!/^\d{4}[A-Z0-9]{3}$/.test(productId) || !/^V[1-9]R\dM\d$/.test(release)) return;
+  if (message.scenario === DSPPTF_STATUS && (!/^\d{4}[A-Z0-9]{3}$/.test(productId) || !/^V[1-9]R\dM\d$/.test(release))) return;
   channelToken = message.channelToken;
   activePtfs = ptfs;
-  const records = buildDspptfStatusRecords({ system: "CURATOR", ptfs, productId, release });
-  if (
-    records.length === 0 ||
-    records.length > MAX_RECORDS ||
-    records.some((record) => !Array.isArray(record) || record.length > MAX_RECORD_BYTES)
-  ) throw new Error("Scenario fixture exceeds terminal safety limits");
-  screen.clearUnit();
-  for (const record of records) parser.process(Uint8Array.from(record));
-  if (screen.pendingCursor >= 0) {
-    screen.cursor = screen.pendingCursor;
-    screen.pendingCursor = -1;
-  } else {
-    const first = screen.firstFocusable();
-    if (first !== null) screen.cursor = first;
-  }
-  screen.keyboardLocked = false;
-  empty.classList.add("hidden");
-  status.textContent = "";
-  draw();
+  activeGroups = groups;
+  groupDescriptionView = false;
+  activeScenario = message.scenario === WRKPTFGRP
+    ? WRKPTFGRP
+    : { system: "CURATOR", ptfs, productId, release };
+  renderActiveScenario();
 }
 
 window.addEventListener("message", (event) => {
@@ -149,7 +173,7 @@ window.parent.postMessage({ type: "ironterm:ready" }, window.location.origin);
 // Parser internals are available only on an explicitly local development host.
 if (location.hostname === "localhost" || location.hostname === "127.0.0.1") {
   Object.defineProperty(window, "scenarioTerminal", {
-    value: Object.freeze({ screen, parser, builder, loadScenario, Aid, buildDspptfStatusRecords }),
+    value: Object.freeze({ screen, parser, builder, loadScenario, Aid, buildDspptfStatusRecords, buildWrkptfgrpRecords }),
     configurable: false,
     writable: false,
   });

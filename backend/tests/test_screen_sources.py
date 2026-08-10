@@ -35,6 +35,8 @@ def test_ptf_screen_registry_has_source_gates():
             assert screen["validation"]
 
     assert screens["DSPPTF_STATUS"]["fixtureStatus"] == "enabled"
+    assert screens["WRKPTFGRP"]["fixtureStatus"] == "implemented_pending_acceptance"
+    assert "validation" in screens["WRKPTFGRP"]
     assert all(
         screens[screen_id]["fixtureStatus"] != "enabled"
         for screen_id in screens
@@ -64,8 +66,23 @@ def test_scenario_message_boundary_rejects_caller_records():
     assert "event.source === frameRef.current?.contentWindow" in rail
     assert "channelToken" in scenario and "channelToken" in rail
     assert "MAX_RECORD_BYTES" in scenario and "MAX_RECORDS" in scenario
-    assert "message.ptfs.length > 7" in scenario
+    assert "ptfs.length > 7" in scenario
+    assert "groups.length > 7" in scenario
     assert "^[A-Z]{2}\\d{5,7}$" in scenario
+    assert "^SF\\d{5}$" in scenario
+
+
+def test_wrkptfgrp_fixture_is_source_bounded_and_preview_only():
+    data = json.loads(REGISTRY.read_text(encoding="utf-8"))
+    screen = next(item for item in data["screens"] if item["id"] == "WRKPTFGRP")
+    fixture = (REGISTRY.parent / "wrkptfgrp.js").read_text(encoding="utf-8")
+
+    assert screen["fixtureStatus"] == "implemented_pending_acceptance"
+    assert "status combinations are explicitly synthetic" in screen["validation"]
+    assert "2026-08-10" in fixture
+    assert any("GROUP_PTF_INFO" in source["title"] for source in screen["sources"])
+    assert "buildWrkptfgrpRecords" in fixture
+    assert "descriptionView" in fixture
 
 
 def test_scenario_browser_hardening_is_present():

@@ -2012,6 +2012,95 @@ iframe:focus-visible {
   border: 0;
 }
 
+.verification-scenario-tabs {
+  display: flex;
+  gap: 0.45rem;
+  margin: 0 0 0.65rem;
+}
+
+.verification-scenario-tabs button {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  padding: 0.42rem 0.75rem;
+  font: inherit;
+  cursor: pointer;
+}
+
+.verification-scenario-tabs button[aria-pressed="true"] {
+  border-color: var(--green);
+  background: color-mix(in srgb, var(--green) 12%, transparent);
+  color: var(--white);
+}
+
+.sql-evidence-route {
+  margin-top: 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--panel) 88%, #000);
+  overflow: hidden;
+}
+
+.sql-evidence-route summary {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.9rem 1rem;
+  cursor: pointer;
+}
+
+.sql-evidence-route summary span,
+.sql-evidence-grid article > p {
+  color: var(--green);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.sql-evidence-route summary strong {
+  font-size: 0.92rem;
+}
+
+.sql-evidence-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  padding: 0 1rem;
+}
+
+.sql-evidence-grid article {
+  min-width: 0;
+}
+
+.sql-evidence-grid pre {
+  overflow: auto;
+  margin: 0.4rem 0 0;
+  padding: 0.8rem;
+  border-radius: 8px;
+  background: #020705;
+  color: #a8f3c7;
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
+
+.sql-evidence-note {
+  margin: 0.85rem 1rem 0.55rem;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
+.sql-evidence-route > a {
+  display: inline-block;
+  margin: 0 0 0.9rem 1rem;
+  color: var(--green);
+  font-size: 0.78rem;
+}
+
+@media (max-width: 760px) {
+  .sql-evidence-grid { grid-template-columns: 1fr; }
+}
+
 .verification-assist-wrap {
   border: 1px solid #284238;
   background: #020403;

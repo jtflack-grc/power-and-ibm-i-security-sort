@@ -1,10 +1,11 @@
 {
   "schemaVersion": 1,
-  "reviewedAt": "2026-08-09",
+  "reviewedAt": "2026-08-10",
   "scope": "IBM i PTF verification screens for transport-free IronTerm scenarios",
   "sourcePolicy": {
     "tierA": "IBM documentation, IBM Support technote, IBM Redbook, or clean IBM i capture",
     "tierB": "Legacy Control Lab implementation already accepted as a synthetic training screen",
+    "tierC": "Third-party IBM i practitioner or vendor material used only to corroborate workflow or visual structure; never sufficient to enable a fixture",
     "releaseRule": "A fixture may not be enabled until labels, options, columns, status vocabulary, function keys, and navigation are supported by Tier A evidence and reviewed by John Flack.",
     "dataRule": "System names, PTF identifiers, products, releases, dates, group levels, and descriptions in shipped fixtures must be synthetic or public IBM examples."
   },
@@ -17,7 +18,7 @@
     {
       "id": "WRKPTFGRP",
       "title": "Work with PTF Groups",
-      "fixtureStatus": "candidate",
+      "fixtureStatus": "implemented_pending_acceptance",
       "flowRole": "Group-level currency and installed-status verification",
       "lclAssessment": "Reuse the LCL screen structure and subfile routing, then correct its option legend, group-level presentation, conditional keys, and release examples against IBM evidence.",
       "confirmedBehavior": [
@@ -28,7 +29,8 @@
         "Option 8 displays special-handling PTFs for the cumulative group",
         "Option 4 deletes group information without deleting constituent PTFs",
         "Multiple stored levels may appear",
-        "F6 prints the group report"
+        "F6 prints the group report",
+        "F11 switches between release and descriptive text views"
       ],
       "sources": [
         {
@@ -58,6 +60,30 @@
         },
         {
           "tier": "A",
+          "title": "IBM i Group PTFs with level",
+          "url": "https://www.ibm.com/support/pages/ibm-i-group-ptfs-level",
+          "supports": ["current public IBM i 7.4 group identifiers", "current public group levels", "group descriptions", "publication dates"]
+        },
+        {
+          "tier": "A",
+          "title": "IBM i 7.4 — GROUP_PTF_INFO view",
+          "url": "https://www.ibm.com/docs/en/i/7.4.0?topic=services-group-ptf-info-view",
+          "supports": ["SQL-service equivalent", "group name", "group description", "group level", "group status", "target release", "canonical status vocabulary"]
+        },
+        {
+          "tier": "C",
+          "title": "MC Press — Managing Fix Groups in iSeries Navigator",
+          "url": "https://www.mcpressonline.com/it-infrastructure/it-infrastructure-other/managing-fix-groups-in-iseries-navigator",
+          "supports": ["historical visual corroboration", "group name/level/status/description relationship", "option 5 and option 9 workflow"]
+        },
+        {
+          "tier": "C",
+          "title": "FAQ400 — Checking PTF level with SQL",
+          "url": "https://blog.faq400.com/en/system-administration-en/checking-ptf-level-with-sql-2/",
+          "supports": ["practitioner SQL examples", "WRKPTFGRP to GROUP_PTF_INFO equivalence", "DSPPTF to PTF_INFO equivalence"]
+        },
+        {
+          "tier": "A",
           "title": "IBM Support — Reasons Why Groups in WRKPTFGRP May Show as Not Installed",
           "url": "https://www.ibm.com/support/pages/reasons-why-groups-wrkptfgrp-may-show-not-installed",
           "supports": ["option 5", "conditional F19", "not-installed reasons", "F6 print"]
@@ -81,7 +107,8 @@
           "supports": ["field coordinates", "input option field", "paging behavior"]
         }
       ],
-      "remainingGate": "Compare the Redbook's complete preformatted panels with a current IBM i 7.4/7.5/7.6 capture, encode both initial and F11 views, and obtain John Flack visual acceptance before enabling the fixture."
+      "validation": "Initial and F11 views are implemented as bounded CP037 WTD fixtures. Coordinates follow the complete IBM Redbook panels; group/level pairs follow IBM's public IBM i 7.4 table retrieved 2026-08-10; status combinations are explicitly synthetic. Parser, field-count, PF-mask, and navigation tests must pass before preview.",
+      "remainingGate": "Obtain John Flack visual acceptance of the previewed initial and F11 views before changing fixtureStatus to enabled."
     },
     {
       "id": "DSPPTFGRP",
@@ -164,6 +191,18 @@
           "title": "IBM i 7.4 — Displaying level of fixes",
           "url": "https://www.ibm.com/docs/en/i/7.4.0?topic=system-displaying-level-fixes",
           "supports": ["5770SS1 and 5770999 command paths", "cumulative package identifiers"]
+        },
+        {
+          "tier": "C",
+          "title": "Skytap Help — DSPPTF panel capture",
+          "url": "https://support.skytap.com/hc/article_attachments/5960534983191/mceclip2.png",
+          "supports": ["modern DSPPTF visual corroboration", "release header", "PTF status rows"]
+        },
+        {
+          "tier": "C",
+          "title": "IT Management 101 — How to Check IBM i Version with DSPPTF",
+          "url": "https://www.itmanagement101.co.uk/how-to-find-out-what-version-of-os400-as400-ibm-iseries-operating-system-you-have-installed/",
+          "supports": ["DSPPTF command workflow", "release-level interpretation", "practitioner screen example"]
         }
       ],
       "validation": "Implemented as a bounded CP037 WTD fixture and verified through IronTerm's parser as a 24x80 matrix with seven input fields and a host-style PF disable mask.",
