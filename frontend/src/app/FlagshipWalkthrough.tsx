@@ -23,8 +23,8 @@ export function FlagshipWalkthrough({ finding, onOpen, visible }: Props) {
       <ol className="flagship-steps">
         <li>Open the finding — levers show why it ranks.</li>
         <li>Resolve tab — bulletin + Fix Central path.</li>
-        <li>Optional: Route queue (or persona “IBM i · exposed services”) — shop levers appear.</li>
-        <li>Copy change packet — ticket-ready Markdown, still in-browser.</li>
+        <li>Use the evidence rail to verify the published fix path.</li>
+        <li>Copy the change packet for ticket-ready Markdown.</li>
       </ol>
       {finding ? (
         <button type="button" className="button button-primary" onClick={() => onOpen(finding)}>

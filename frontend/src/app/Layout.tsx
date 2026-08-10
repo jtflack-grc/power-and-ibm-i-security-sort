@@ -1,9 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Finding, ProgressEvent, TriageResult } from "../types";
-import {
-  findingMatchesPaste,
-  type ShopContext,
-} from "../shopContext";
 import { FLAGSHIP_CVE, FlagshipWalkthrough } from "./FlagshipWalkthrough";
 import type { ActionLane } from "./ActionLanesFlow";
 import { FeedHealthStrip } from "./FeedHealthStrip";
@@ -12,7 +8,6 @@ import { IssueDetailPanel } from "./IssueDetailPanel";
 import { LiveFailCallout, LiveWaitCallout } from "./LiveStatusCallouts";
 import { LiveProgressBanner } from "./LiveProgressBanner";
 import { PtfCommandCoach } from "./PtfCommandCoach";
-import { ShopContextPanel } from "./ShopContextPanel";
 import { VerificationRail } from "./VerificationRail";
 
 type Pane = "findings" | "issue" | "flow";
@@ -34,9 +29,6 @@ interface Props {
   onDismissPending: () => void;
   backendAvailable: boolean;
   publishedAvailable: boolean;
-  shop: ShopContext;
-  onShopChange: (ctx: ShopContext) => void;
-  onStartIntake: () => void;
   onOpenCredits?: () => void;
   liveError?: string | null;
   onClearError?: () => void;
@@ -72,9 +64,6 @@ export function Layout({
   onDismissPending,
   backendAvailable,
   publishedAvailable,
-  shop,
-  onShopChange,
-  onStartIntake,
   onOpenCredits,
   liveError = null,
   onClearError,
@@ -100,11 +89,6 @@ export function Layout({
   const flagship =
     findings.find((f) => f.cve_id === (result?.flagship_cve || FLAGSHIP_CVE)) ?? null;
   const emptyLive = result?.mode === "live" && findings.length === 0;
-  const pasteHits = useMemo(
-    () => findings.filter((f) => findingMatchesPaste(f, shop.paste)).map((f) => f.cve_id),
-    [findings, shop.paste]
-  );
-
   const scopedFindings = findings;
 
   useEffect(() => {
@@ -134,10 +118,6 @@ export function Layout({
     setShowFlagship(false);
   };
 
-  const onShopChangeOnly = (ctx: ShopContext) => {
-    onShopChange(ctx);
-  };
-
   return (
     <div className="app-shell">
       <header className="site-header">
@@ -153,9 +133,6 @@ export function Layout({
           <div className="brand-sub">IBM i Vulnerability Curator · i on GRC</div>
         </a>
         <div className="header-actions">
-          <button type="button" className="button" onClick={onStartIntake}>
-            Route queue
-          </button>
           <button
             type="button"
             className="button"
@@ -238,35 +215,16 @@ export function Layout({
             <h2>Findings</h2>
             <div className="meta">
               {scopedFindings.length} · {modeLabel}
-              {shop.enabled ? " · shop on" : ""}
-              {pasteHits.length ? ` · ${pasteHits.length} paste hit` : ""}
               {liveRunning ? " · live bg" : ""}
             </div>
           </div>
           <div className="panel-body">
-            <aside className="intro-brief" aria-label="Queue focus">
-              <p className="intro-brief-lead">
-                Focused modern rail — museum CVEs stay out unless you include older findings. Not a
-                scanner of record.
-              </p>
-            </aside>
             {result?.mode === "sample" && (
               <FlagshipWalkthrough
                 finding={flagship}
                 onOpen={openFinding}
                 visible={showFlagship}
               />
-            )}
-            <ShopContextPanel
-              context={shop}
-              onChange={onShopChangeOnly}
-              onStartIntake={onStartIntake}
-            />
-            {shop.enabled && result && (
-              <div className="route-cue" role="status">
-                IBM i shop ranking is on. Exposure, privilege, change pressure, and pasted
-                PTF/APAR evidence are re-weighting this browser session only.
-              </div>
             )}
             {liveRunning && !result && (
               <LiveWaitCallout
@@ -368,7 +326,7 @@ export function Layout({
                 laneFilter={laneFilter}
                 onLaneFilter={setLaneFilter}
                 onSelect={openFinding}
-                pasteHitIds={pasteHits}
+                pasteHitIds={[]}
               />
             )}
           </div>
@@ -380,7 +338,7 @@ export function Layout({
             <div className="meta">{selectedResolved?.cve_id ?? "select one"}</div>
           </div>
           <div className="panel-body">
-            <IssueDetailPanel finding={selectedResolved} shop={shop} bulletin={selectedBulletin} generatedAt={result?.generated_at} />
+            <IssueDetailPanel finding={selectedResolved} bulletin={selectedBulletin} generatedAt={result?.generated_at} />
           </div>
         </section>
 

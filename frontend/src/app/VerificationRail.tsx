@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Bulletin, Finding } from "../types";
 import { extractPtfEvidence } from "../ptfEvidence";
 import { RemediationAssist } from "./RemediationAssist";
-import { InventoryComparison } from "./InventoryComparison";
 
 interface Props {
   finding: Finding | null;
@@ -10,10 +9,28 @@ interface Props {
 }
 
 export function VerificationRail({ finding, bulletin = null }: Props) {
+  const groupSql = `SELECT PTF_GROUP_NAME,
+       PTF_GROUP_DESCRIPTION,
+       PTF_GROUP_LEVEL,
+       PTF_GROUP_STATUS,
+       PTF_GROUP_TARGET_RELEASE
+  FROM QSYS2.GROUP_PTF_INFO
+ ORDER BY PTF_GROUP_NAME,
+          PTF_GROUP_LEVEL DESC;`;
+  const ptfSql = `SELECT PTF_IDENTIFIER,
+       PTF_PRODUCT_ID,
+       PTF_PRODUCT_RELEASE_LEVEL,
+       PTF_LOADED_STATUS,
+       PTF_IPL_ACTION,
+       PTF_ACTION_PENDING,
+       PTF_IPL_REQUIRED
+  FROM QSYS2.PTF_INFO
+ ORDER BY PTF_IDENTIFIER;`;
   const frameRef = useRef<HTMLIFrameElement>(null);
   const channelTokenRef = useRef(crypto.randomUUID());
   const [showSources, setShowSources] = useState(false);
   const [showSql, setShowSql] = useState(false);
+  const [copiedSql, setCopiedSql] = useState<"group" | "ptf" | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
   const applicableRows = useMemo(
     () => (bulletin?.applicability ?? []).filter((row) =>
@@ -78,12 +95,18 @@ export function VerificationRail({ finding, bulletin = null }: Props) {
     return () => window.removeEventListener("keydown", close);
   }, [fullscreen]);
 
+  const copySql = async (kind: "group" | "ptf") => {
+    await navigator.clipboard.writeText(kind === "group" ? groupSql : ptfSql);
+    setCopiedSql(kind);
+    window.setTimeout(() => setCopiedSql((current) => current === kind ? null : current), 1400);
+  };
+
   return (
     <section className={`verification-rail ${fullscreen ? "verification-fullscreen" : ""}`} aria-labelledby="verification-title">
-      <div className="verification-head">
+      <div className="verification-head verification-head-compact">
         <div>
-          <p className="verification-kicker">System verification</p>
-          <h3 id="verification-title">Legacy Control Lab evidence check</h3>
+          <p className="verification-kicker">Evidence engineering</p>
+          <h3 id="verification-title">Collect SQL, then verify on IBM i</h3>
         </div>
         <div className="verification-head-actions">
           <button
@@ -97,9 +120,6 @@ export function VerificationRail({ finding, bulletin = null }: Props) {
           <button type="button" className="verification-source-button" aria-pressed={fullscreen} onClick={() => setFullscreen((value) => !value)}>
             {fullscreen ? "Exit full screen" : "Full screen"}
           </button>
-          <span className="verification-state">
-            {hasTerminalPath ? "IBM-sourced PTF displays" : "Guided evidence route"}
-          </span>
         </div>
       </div>
       {showSources && (
@@ -118,13 +138,6 @@ export function VerificationRail({ finding, bulletin = null }: Props) {
           <span>Option 5 remains gated until its destination screen has coordinate evidence.</span>
         </div>
       )}
-      <p className="verification-copy">
-        {finding
-          ? hasTerminalPath
-            ? `${finding.cve_id} has a ${hasPtfPath ? "PTF" : "group PTF"} path. Walk the source-validated status display, then use the SQL evidence route beneath it for repeatable collection.`
-            : `${finding.cve_id} does not resolve to an individual PTF. The evidence workspace below is routed by the remediation type IBM published.`
-          : "Select a finding to assess whether an IBM i verification scenario applies."}
-      </p>
       {applicableRows.length > 1 && (
         <label className="verification-applicability">
           Applicable IBM i fix row
@@ -138,7 +151,6 @@ export function VerificationRail({ finding, bulletin = null }: Props) {
           </select>
         </label>
       )}
-      {!fullscreen && <InventoryComparison bulletin={bulletin} />}
       {hasTerminalPath ? (
         <>
           {hasPtfPath && hasGroupPath && (
@@ -149,45 +161,25 @@ export function VerificationRail({ finding, bulletin = null }: Props) {
           )}
           {!fullscreen && (
             <section className="sql-evidence-route" aria-label="SQL evidence engineering route">
-              <button
-                type="button"
-                className="sql-evidence-toggle"
-                aria-expanded={showSql}
-                onClick={() => setShowSql((value) => !value)}
-              >
-                <span>Evidence engineering route</span>
-                <strong>{showSql ? "Hide IBM i SQL services" : "Show IBM i SQL services"}</strong>
-              </button>
+              <div className="sql-evidence-actions">
+                <div><span>IBM i SQL services</span><strong>Repeatable PTF evidence</strong></div>
+                <button type="button" onClick={() => void copySql("group")}>{copiedSql === "group" ? "Copied" : "Copy group SQL"}</button>
+                <button type="button" onClick={() => void copySql("ptf")}>{copiedSql === "ptf" ? "Copied" : "Copy PTF SQL"}</button>
+                <button type="button" aria-expanded={showSql} onClick={() => setShowSql((value) => !value)}>{showSql ? "Hide queries" : "Preview queries"}</button>
+              </div>
               {showSql && (
                 <div className="sql-evidence-body">
                   <div className="sql-evidence-grid">
                     <article>
                       <p>Group PTF evidence</p>
-                      <pre><code>{`SELECT PTF_GROUP_NAME,
-       PTF_GROUP_DESCRIPTION,
-       PTF_GROUP_LEVEL,
-       PTF_GROUP_STATUS,
-       PTF_GROUP_TARGET_RELEASE
-  FROM QSYS2.GROUP_PTF_INFO
- ORDER BY PTF_GROUP_NAME,
-          PTF_GROUP_LEVEL DESC;`}</code></pre>
+                      <pre><code>{groupSql}</code></pre>
                     </article>
                     <article>
                       <p>Individual PTF evidence</p>
-                      <pre><code>{`SELECT PTF_IDENTIFIER,
-       PTF_PRODUCT_ID,
-       PTF_PRODUCT_RELEASE_LEVEL,
-       PTF_LOADED_STATUS,
-       PTF_IPL_ACTION,
-       PTF_ACTION_PENDING,
-       PTF_IPL_REQUIRED
-  FROM QSYS2.PTF_INFO
- ORDER BY PTF_IDENTIFIER;`}</code></pre>
+                      <pre><code>{ptfSql}</code></pre>
                     </article>
                   </div>
-                  <p className="sql-evidence-note">
-                    Run through ACS Run SQL Scripts or your approved Db2 for i client. Export sanitized results and retain the query, collection timestamp, partition identity, and job identity with the evidence packet.
-                  </p>
+                  <p className="sql-evidence-note">Run in ACS or an approved Db2 for i client; retain timestamp and partition identity.</p>
                   <a href="https://www.ibm.com/docs/en/i/7.4.0?topic=services-group-ptf-info-view" target="_blank" rel="noreferrer">IBM GROUP_PTF_INFO reference ↗</a>
                   <a href="https://www.ibm.com/docs/en/i/7.4.0?topic=services-ptf-info-view" target="_blank" rel="noreferrer">IBM PTF_INFO reference ↗</a>
                 </div>
