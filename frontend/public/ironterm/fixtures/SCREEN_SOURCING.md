@@ -11,7 +11,7 @@ must not be collapsed:
 
 | Screen | LCL starting point | IBM evidence | Fixture decision |
 |---|---|---|---|
-| WRKPTFGRP | Strong structural candidate | Complete IBM Redbook initial/F11 panels plus current command and support behavior | Hold for modern-release comparison and John visual acceptance |
+| WRKPTFGRP | Strong structural candidate | Complete IBM Redbook initial/F11 panels, December 2024 IBM screen examples, current 7.4 group levels, and current command/SQL-service semantics | Implemented for preview; hold public enablement for John visual acceptance |
 | DSPPTFGRP | Strong structural candidate | Navigation, F19, F6, and status behavior identified | Hold for full-panel capture |
 | Display PTF Status | Missing as a distinct LCL panel | Two IBM technotes contain preformatted screen output | Ready to encode |
 | Display PTF Details menu | LCL currently skips it | IBM confirms the menu and option 1 | Hold for full-panel capture |
@@ -41,9 +41,20 @@ IBM Redbook SG24-7311 pages 18–19 publishes complete preformatted 24x80 text f
 both the initial Work with PTF Groups panel and its F11 description view. It
 establishes the option legend, group/level/status and group/text columns, example
 row placement, Bottom marker, and F3/F6/F11/F12/F22 labels. Because the example
-is from the i5/OS V5R3 era, it is strong coordinate evidence but not sufficient
-by itself to claim an unchanged IBM i 7.4–7.6 panel. The remaining gate is a
-modern clean capture comparison and John Flack's visual acceptance.
+is from the i5/OS V5R3 era, it is coordinate evidence rather than proof by
+itself. IBM's December 2024 WRKPTFGRP technote confirms the modern `*ALL`,
+`*LATEST`, and `*INSTALLED` presentations, while IBM's current Group PTF table
+supplies the public IBM i 7.4 group/level pairs. The implemented fixture combines
+those sources, marks its partition statuses synthetic, and remains preview-only
+until John Flack visually accepts the initial and F11 views.
+
+## SQL evidence route
+
+The terminal is the interactive teaching surface. The evidence-engineering route
+beneath it uses `QSYS2.GROUP_PTF_INFO` and `QSYS2.PTF_INFO` so a practitioner can
+collect the same state repeatably, export sanitized rows, and retain the query,
+collection timestamp, partition identity, and job identity with the decision
+packet. The SQL results are not uploaded by Curator.
 
 ## First fixture to build
 
