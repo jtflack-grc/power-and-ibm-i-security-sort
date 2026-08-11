@@ -19,14 +19,26 @@ interface Props {
 
 type IssueSection = "overview" | "workflow" | "fix" | "interim";
 
+function plainOverview(finding: Finding): string {
+  const fixPath = finding.resolution_steps?.some((step) => ["ptf", "ptf_group", "apar"].includes(String(step.kind)))
+    ? "IBM has published a fix path for at least one affected product and release."
+    : "A specific downloadable fix was not recovered from the bulletin, so the item still needs research.";
+  const urgency = finding.on_kev
+    ? "Attackers are known to be using this weakness, so confirm exposure promptly."
+    : finding.bucket === "urgent"
+      ? "Treat it as a priority until you confirm whether your partition is affected."
+      : "Confirm that your installed product and IBM i release appear in IBM's affected-product table.";
+  return `${urgency} ${fixPath} Open Resolve for IBM's remedy, then use Evidence to check the partition.`;
+}
+
 export function IssueDetailPanel({ finding, shop, bulletin, generatedAt }: Props) {
-  const [openSection, setOpenSection] = useState<IssueSection | null>(null);
+  const [openSection, setOpenSection] = useState<IssueSection | null>("overview");
   const [copied, setCopied] = useState(false);
   const [workflow, setWorkflow] = useState<CaseWorkflow>(() => finding ? loadCaseWorkflow(finding.cve_id) : loadCaseWorkflow("none"));
 
   useEffect(() => {
     if (finding) {
-      setOpenSection(null);
+      setOpenSection("overview");
       setWorkflow(loadCaseWorkflow(finding.cve_id));
     }
     setCopied(false);
@@ -88,7 +100,8 @@ export function IssueDetailPanel({ finding, shop, bulletin, generatedAt }: Props
           <span>Overview</span><strong>{finding.title}</strong>
         </button>
         {openSection === "overview" && <div className="issue-accordion-body">
-          <p className="issue-desc">{finding.description}</p>
+          <p className="issue-plain-title">{finding.title}</p>
+          <p className="issue-desc">{plainOverview(finding)}</p>
           <div className="badges">
             {finding.on_kev && <span className="badge kev">KEV</span>}
             {finding.action_lane && <span className={`badge badge-lane lane-${finding.action_lane}`}>{finding.action_lane}</span>}

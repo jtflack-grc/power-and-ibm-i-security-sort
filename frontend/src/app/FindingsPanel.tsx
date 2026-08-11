@@ -56,13 +56,11 @@ export function FindingsPanel({
   const [bucket, setBucket] = useState<Bucket | "all">("all");
   const [includeOlder, setIncludeOlder] = useState(false);
   const [showAll, setShowAll] = useState(false);
-  const [ptfOnly, setPtfOnly] = useState(false);
   const [releaseFilter, setReleaseFilter] = useState("all");
   const [productFilter, setProductFilter] = useState("all");
   const [remedyFilter, setRemedyFilter] = useState("all");
-  const [recentOnly, setRecentOnly] = useState(false);
-  const [newOnly, setNewOnly] = useState(false);
-  const [snapshotChange, setSnapshotChange] = useState<"all" | "new" | "modified">("all");
+  const [publishedFilter, setPublishedFilter] = useState("all");
+  const [changeFilter, setChangeFilter] = useState<"all" | "new" | "modified" | "visit">("all");
   const [newBulletinIds, setNewBulletinIds] = useState<Set<string>>(new Set());
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const listRef = useRef<HTMLDivElement>(null);
@@ -71,7 +69,6 @@ export function FindingsPanel({
   const filtered = useMemo(() => {
     return findings.filter((f) => {
       if (bucket !== "all" && f.bucket !== bucket) return false;
-      if (ptfOnly && !hasPtfEvidence(f)) return false;
       if (laneFilter !== "all" && (f.action_lane ?? "monitor") !== laneFilter) {
         return false;
       }
@@ -83,9 +80,7 @@ export function FindingsPanel({
       }
       return true;
     });
-  }, [findings, bucket, laneFilter, includeOlder, selectedId, pasteHitIds, ptfOnly]);
-
-  const ptfCount = useMemo(() => findings.filter(hasPtfEvidence).length, [findings]);
+  }, [findings, bucket, laneFilter, includeOlder, selectedId, pasteHitIds]);
 
   const olderHidden = useMemo(() => {
     if (includeOlder) return 0;
@@ -139,6 +134,23 @@ export function FindingsPanel({
   );
   const snapshotNewCount = useMemo(() => bulletins.filter((item) => item.change_status === "new").length, [bulletins]);
   const snapshotModifiedCount = useMemo(() => bulletins.filter((item) => item.change_status === "modified").length, [bulletins]);
+  const completedMonths = useMemo(() => {
+    const now = new Date();
+    return Array.from({ length: 6 }, (_, index) => {
+      const date = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1 - index, 1));
+      const key = date.toISOString().slice(0, 7);
+      const ids = new Set(
+        bulletins
+          .filter((bulletin) => shortDate(bulletin.published)?.startsWith(key))
+          .flatMap((bulletin) => bulletin.applicability.flatMap((row) => [...row.individual_ptfs, ...row.group_ptfs]))
+      );
+      return {
+        key,
+        label: date.toLocaleDateString(undefined, { month: "long", year: "numeric", timeZone: "UTC" }),
+        count: ids.size,
+      };
+    });
+  }, [bulletins]);
   const productOptions = useMemo(() => {
     const values = bulletins.flatMap((bulletin) => bulletin.applicability.map((row) => ({
       value: `${row.product_id || "unknown"}|${row.component_type}`,
@@ -162,11 +174,17 @@ export function FindingsPanel({
     }
     return [...groups.values()].filter((group) => {
       const bulletin = bulletinIndex.get(group.id);
-      if (newOnly && !newBulletinIds.has(group.id)) return false;
-      if (snapshotChange !== "all" && bulletin?.change_status !== snapshotChange) return false;
-      if (recentOnly) {
+      if (changeFilter === "visit" && !newBulletinIds.has(group.id)) return false;
+      if ((changeFilter === "new" || changeFilter === "modified") && bulletin?.change_status !== changeFilter) return false;
+      if (publishedFilter === "recent") {
         const stamp = new Date(group.published || "").getTime();
         if (Number.isNaN(stamp) || Date.now() - stamp > 30 * 86_400_000) return false;
+      }
+      if (publishedFilter.startsWith("month:")) {
+        const month = publishedFilter.slice(6);
+        if (!shortDate(group.published)?.startsWith(month)) return false;
+        const hasMonthlyPtf = bulletin?.applicability.some((row) => row.individual_ptfs.length || row.group_ptfs.length);
+        if (!hasMonthlyPtf) return false;
       }
       if (releaseFilter !== "all" && !bulletin?.applicability.some((row) => row.release === releaseFilter)) return false;
       if (productFilter !== "all" && !bulletin?.applicability.some((row) => `${row.product_id || "unknown"}|${row.component_type}` === productFilter)) return false;
@@ -177,7 +195,7 @@ export function FindingsPanel({
       if (remedyFilter === "apar") return steps.some((step) => step.kind === "apar");
       return !steps.some((step) => ["ptf", "ptf_group", "apar"].includes(String(step.kind)));
     });
-  }, [visible, bulletinIndex, releaseFilter, productFilter, remedyFilter, newOnly, newBulletinIds, snapshotChange, recentOnly]);
+  }, [visible, bulletinIndex, releaseFilter, productFilter, remedyFilter, newBulletinIds, changeFilter, publishedFilter]);
   const visibleGroupFindings = useMemo(() => visibleGroups.flatMap((group) => group.findings), [visibleGroups]);
 
   useEffect(() => {
@@ -240,47 +258,31 @@ export function FindingsPanel({
         }
       }}
     >
-      <div className="findings-filters">
-        <div className="filter-row-label">Priority</div>
-        {BUCKETS.map((b) => (
-          <button
-            key={b}
-            type="button"
-            className={`chip ${bucket === b ? "active" : ""}`}
-            onClick={() => setBucket(b)}
-          >
-            {b}
-          </button>
-        ))}
-        {ptfCount > 0 && (
-          <button
-            type="button"
-            className={`chip ${ptfOnly ? "active" : ""}`}
-            onClick={() => setPtfOnly((value) => !value)}
-            title="Show findings with a PTF identifier extracted from IBM guidance"
-          >
-            PTF evidence ({ptfCount})
-          </button>
-        )}
-      </div>
-      <div className="findings-filters findings-filters-compact">
-        <div className="filter-row-label">Action</div>
-        {LANES.map((lane) => (
-          <button
-            key={lane}
-            type="button"
-            className={`chip ${laneFilter === lane ? "active" : ""}`}
-            onClick={() => onLaneFilter(lane)}
-          >
-            {lane}
-          </button>
-        ))}
-      </div>
       <div className="findings-focus-bar">
-        <button type="button" className={`chip ${recentOnly ? "active" : ""}`} onClick={() => setRecentOnly((value) => !value)}>Recently published · 30d</button>
-        {snapshotNewCount > 0 && <button type="button" className={`chip ${snapshotChange === "new" ? "active" : ""}`} onClick={() => setSnapshotChange((value) => value === "new" ? "all" : "new")}>New snapshot ({snapshotNewCount})</button>}
-        {snapshotModifiedCount > 0 && <button type="button" className={`chip ${snapshotChange === "modified" ? "active" : ""}`} onClick={() => setSnapshotChange((value) => value === "modified" ? "all" : "modified")}>Remediation updated ({snapshotModifiedCount})</button>}
-        {newBulletinIds.size > 0 && <button type="button" className={`chip ${newOnly ? "active" : ""}`} onClick={() => setNewOnly((value) => !value)}>New since last visit ({newBulletinIds.size})</button>}
+        <label className="queue-select">Priority
+          <select value={bucket} onChange={(event) => setBucket(event.target.value as Bucket | "all")}>{BUCKETS.map((value) => <option key={value} value={value}>{value === "all" ? "All priorities" : value}</option>)}</select>
+        </label>
+        <label className="queue-select">Action
+          <select value={laneFilter} onChange={(event) => onLaneFilter(event.target.value as ActionLane | "all")}>{LANES.map((value) => <option key={value} value={value}>{value === "all" ? "All actions" : value}</option>)}</select>
+        </label>
+        <label className="queue-select">Published / PTF month
+          <select value={publishedFilter} onChange={(event) => setPublishedFilter(event.target.value)}>
+            <option value="all">All published</option>
+            <option value="recent">Last 30 days</option>
+            {completedMonths.map((month) => <option key={month.key} value={`month:${month.key}`}>{month.label} · {month.count} PTFs</option>)}
+          </select>
+        </label>
+        <details className="queue-more-filters">
+          <summary>More filters</summary>
+          <div className="queue-more-grid">
+        <label className="queue-select">Updates
+          <select value={changeFilter} onChange={(event) => setChangeFilter(event.target.value as typeof changeFilter)}>
+            <option value="all">All updates</option>
+            {snapshotNewCount > 0 && <option value="new">New snapshot ({snapshotNewCount})</option>}
+            {snapshotModifiedCount > 0 && <option value="modified">Remediation updated ({snapshotModifiedCount})</option>}
+            {newBulletinIds.size > 0 && <option value="visit">New since last visit ({newBulletinIds.size})</option>}
+          </select>
+        </label>
         <label className="queue-select">Release
           <select value={releaseFilter} onChange={(event) => setReleaseFilter(event.target.value)}>
             <option value="all">All</option>
@@ -315,6 +317,8 @@ export function FindingsPanel({
             {showAll ? `Show top ${FOCUS_LIMIT}` : `Show all ${filtered.length}`}
           </button>
         )}
+          </div>
+        </details>
       </div>
       <div className="filter-count">
         Showing {visibleGroups.length} bulletins · {visibleGroupFindings.length} of {findings.length} CVEs

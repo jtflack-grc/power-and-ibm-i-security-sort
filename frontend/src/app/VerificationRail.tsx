@@ -8,24 +8,11 @@ interface Props {
   bulletin?: Bulletin | null;
 }
 
+function sqlLiteral(value: string): string {
+  return `'${value.replaceAll("'", "''")}'`;
+}
+
 export function VerificationRail({ finding, bulletin = null }: Props) {
-  const groupSql = `SELECT PTF_GROUP_NAME,
-       PTF_GROUP_DESCRIPTION,
-       PTF_GROUP_LEVEL,
-       PTF_GROUP_STATUS,
-       PTF_GROUP_TARGET_RELEASE
-  FROM QSYS2.GROUP_PTF_INFO
- ORDER BY PTF_GROUP_NAME,
-          PTF_GROUP_LEVEL DESC;`;
-  const ptfSql = `SELECT PTF_IDENTIFIER,
-       PTF_PRODUCT_ID,
-       PTF_PRODUCT_RELEASE_LEVEL,
-       PTF_LOADED_STATUS,
-       PTF_IPL_ACTION,
-       PTF_ACTION_PENDING,
-       PTF_IPL_REQUIRED
-  FROM QSYS2.PTF_INFO
- ORDER BY PTF_IDENTIFIER;`;
   const frameRef = useRef<HTMLIFrameElement>(null);
   const channelTokenRef = useRef(crypto.randomUUID());
   const [showSources, setShowSources] = useState(false);
@@ -45,7 +32,7 @@ export function VerificationRail({ finding, bulletin = null }: Props) {
   const selectedApplicability = applicableRows.find((row) => row.applicability_id === applicabilityId);
   const fallbackMeta = useMemo(() => extractPtfEvidence(finding), [finding]);
   const scenarioMeta = useMemo(() => selectedApplicability ? {
-    ptfs: selectedApplicability.individual_ptfs.slice(0, 1),
+    ptfs: selectedApplicability.individual_ptfs,
     groups: selectedApplicability.group_ptfs,
     apars: selectedApplicability.apars,
     summaries: [],
@@ -57,6 +44,34 @@ export function VerificationRail({ finding, bulletin = null }: Props) {
   const hasPtfPath = ptfs.length > 0 && Boolean(scenarioMeta.productId && scenarioMeta.release);
   const hasGroupPath = groups.length > 0;
   const hasTerminalPath = hasPtfPath || hasGroupPath;
+  const groupSql = useMemo(() => {
+    const filters: string[] = [];
+    if (groups.length) filters.push(`PTF_GROUP_NAME IN (${groups.map(sqlLiteral).join(", ")})`);
+    if (scenarioMeta.release) filters.push(`PTF_GROUP_TARGET_RELEASE = ${sqlLiteral(scenarioMeta.release)}`);
+    return `SELECT PTF_GROUP_NAME,
+       PTF_GROUP_DESCRIPTION,
+       PTF_GROUP_LEVEL,
+       PTF_GROUP_STATUS,
+       PTF_GROUP_TARGET_RELEASE
+  FROM QSYS2.GROUP_PTF_INFO${filters.length ? `\n WHERE ${filters.join("\n   AND ")}` : ""}
+ ORDER BY PTF_GROUP_NAME,
+          PTF_GROUP_LEVEL DESC;`;
+  }, [groups, scenarioMeta.release]);
+  const ptfSql = useMemo(() => {
+    const filters: string[] = [];
+    if (scenarioMeta.productId) filters.push(`PTF_PRODUCT_ID = ${sqlLiteral(scenarioMeta.productId)}`);
+    if (scenarioMeta.release) filters.push(`PTF_PRODUCT_RELEASE_LEVEL = ${sqlLiteral(scenarioMeta.release)}`);
+    if (ptfs.length) filters.push(`PTF_IDENTIFIER IN (${ptfs.map(sqlLiteral).join(", ")})`);
+    return `SELECT PTF_IDENTIFIER,
+       PTF_PRODUCT_ID,
+       PTF_PRODUCT_RELEASE_LEVEL,
+       PTF_LOADED_STATUS,
+       PTF_IPL_ACTION,
+       PTF_ACTION_PENDING,
+       PTF_IPL_REQUIRED
+  FROM QSYS2.PTF_INFO${filters.length ? `\n WHERE ${filters.join("\n   AND ")}` : ""}
+ ORDER BY PTF_IDENTIFIER;`;
+  }, [ptfs, scenarioMeta.productId, scenarioMeta.release]);
   const [terminalScenario, setTerminalScenario] = useState<"dspptf-status" | "wrkptfgrp">("dspptf-status");
 
   useEffect(() => {
