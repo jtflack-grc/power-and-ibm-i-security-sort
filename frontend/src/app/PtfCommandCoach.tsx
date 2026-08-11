@@ -32,29 +32,32 @@ export function PtfCommandCoach({ finding }: Props) {
           {finding ? `${finding.cve_id}: ${route} route.` : "Select a finding to hydrate its evidence route."}
         </p>
       </div>
+      <p className="command-coach-help">
+        Start by choosing the IBM i release and product from the fix-row selector below. Run the shown command on that partition, compare the installed state with IBM&apos;s bulletin, and retain the result with the partition name and collection time.
+      </p>
       <div className="command-coach-steps">
         <article className="command-coach-step is-primary">
           <span className="command-coach-number">01 · Locate</span>
           <code>{displayCommand}</code>
           <p>
             {ptf
-              ? "Confirm product, release, PTF status, and IPL action."
+              ? "Run this on the selected partition. Confirm the licensed product and release match the bulletin, then note whether the PTF is loaded, applied, superseded, or waiting for an IPL."
               : group
-                ? "Confirm group level, target release, and installed status."
+                ? "Run this on the selected partition. Confirm the group identifier, installed level, target release, and whether the group is current or has an action pending."
                 : apar
-                  ? "Carry the exact APAR into IBM Support and resolve its iFix or fix-pack target."
-                  : "List unapplied PTFs while the exact bulletin package is being resolved."}
+                  ? "Use the exact APAR in IBM Support to identify the downloadable iFix or fix pack for your installed product level."
+                  : "Use this as a starting inventory only. The exact bulletin package still needs to be resolved before you can claim remediation."}
           </p>
         </article>
         <article className="command-coach-step">
           <span className="command-coach-number">02 · Inspect</span>
           <code>{ptf ? "5=Display PTF details" : "Match product · release · installed level"}</code>
-          <p>{ptf ? "Read general information and cover-letter instructions; detail navigation remains source-gated below." : "Do not treat a CVE, APAR, group, and downloadable fix as interchangeable identifiers."}</p>
+          <p>{ptf ? "Use option 5 to inspect status details and cover-letter instructions. Record any prerequisites, delayed apply, or IPL requirement before scheduling the change." : "Match the installed product and release exactly. A CVE, APAR, PTF group, and downloadable fix identify different parts of the remediation chain."}</p>
         </article>
         <article className="command-coach-step">
           <span className="command-coach-number">03 · Widen</span>
           <code>{group ? "5=Display PTF group" : "WRKPTFGRP PTFGRP(*ALL)"}</code>
-          <p>{group ? "Use option 5 on the selected group; its full screen remains source-gated." : "Check group context. One applied fix does not establish group currency."}</p>
+          <p>{group ? "Review the selected group and its level. A group can contain the required fix even when the individual PTF is superseded." : "Review all installed PTF groups for the release. One applied PTF does not prove that the cumulative, HIPER, or product group is current."}</p>
         </article>
       </div>
     </section>
