@@ -97,7 +97,7 @@ export function FindingsPanel({
   }, [findings, includeOlder, selectedId, pasteHitIds, bucket, laneFilter]);
 
   const visible = useMemo(() => {
-    if (showAll || filtered.length <= FOCUS_LIMIT) return filtered;
+    if (showAll || publishedFilter !== "all" || filtered.length <= FOCUS_LIMIT) return filtered;
     const head = filtered.slice(0, FOCUS_LIMIT);
     // A source-extracted PTF unlocks the verification rail, so retain those
     // sparse rows in the focused queue even when rank places them below 40.
@@ -111,7 +111,7 @@ export function FindingsPanel({
       if (selected) return [...head, selected];
     }
     return head;
-  }, [filtered, showAll, selectedId]);
+  }, [filtered, showAll, selectedId, publishedFilter]);
 
   const bulletinIndex = useMemo(
     () => new Map(bulletins.map((bulletin) => [bulletin.bulletin_id, bulletin])),
@@ -352,7 +352,7 @@ export function FindingsPanel({
           </section>
         );
       })}
-      {filtered.length === 0 && (
+      {visibleGroups.length === 0 && (
         <div className="empty-state">No findings in this dock / priority cut.</div>
       )}
     </div>
