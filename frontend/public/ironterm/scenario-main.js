@@ -5,7 +5,7 @@ import { OutboundBuilder } from "./tn5250/src/proto/OutboundBuilder.js";
 import { Aid, Models } from "./tn5250/src/proto/Constants.js";
 import { Renderer } from "./tn5250/src/ui/Renderer.js";
 import { InputController } from "./tn5250/src/ui/InputController.js";
-import { DSPPTF_STATUS, buildDspptfStatusRecords } from "./fixtures/dspptf-status.js";
+import { DSPPTF_STATUS, buildDspptfDetailRecords, buildDspptfStatusRecords } from "./fixtures/dspptf-status.js";
 import { WRKPTFGRP, buildWrkptfgrpRecords } from "./fixtures/wrkptfgrp.js";
 
 const canvas = document.querySelector("#screen");
@@ -23,9 +23,12 @@ let activePtfs = [];
 let activeGroups = [];
 let activeScenario = null;
 let groupDescriptionView = false;
+let ptfDetailView = null;
 
 function renderActiveScenario() {
-  const records = activeScenario === WRKPTFGRP
+  const records = ptfDetailView
+    ? buildDspptfDetailRecords({ ...activeScenario, ptf: ptfDetailView })
+    : activeScenario === WRKPTFGRP
     ? buildWrkptfgrpRecords({ system: "CURATOR", groups: activeGroups, descriptionView: groupDescriptionView })
     : buildDspptfStatusRecords(activeScenario);
   if (
@@ -72,6 +75,11 @@ function emitAid(aid) {
     renderActiveScenario();
     return;
   }
+  if (aid === Aid.PF12 && ptfDetailView) {
+    ptfDetailView = null;
+    renderActiveScenario();
+    return;
+  }
   const response = builder.buildAidResponse(aid);
   window.parent.postMessage({
     type: "ironterm:aid",
@@ -100,7 +108,12 @@ function emitAid(aid) {
       .find((field) => field.value === "5");
     if (selected) {
       const selectedId = activeScenario === WRKPTFGRP ? activeGroups[selected.index] : activePtfs[selected.index];
-      status.textContent = `${selectedId || (activeScenario === WRKPTFGRP ? "PTF GROUP" : "PTF")}: OPTION 5 DESTINATION CAPTURE REQUIRED`;
+      if (activeScenario !== WRKPTFGRP && selectedId) {
+        ptfDetailView = selectedId;
+        renderActiveScenario();
+        return;
+      }
+      status.textContent = `${selectedId || "PTF GROUP"}: GROUP DETAIL REMAINS SOURCE-GATED`;
       screen.alarm = true;
     } else {
       status.textContent = `TYPE 5 BESIDE A ${activeScenario === WRKPTFGRP ? "PTF GROUP" : "PTF"}, THEN PRESS ENTER`;
@@ -153,6 +166,7 @@ function loadScenario(message) {
   activePtfs = ptfs;
   activeGroups = groups;
   groupDescriptionView = false;
+  ptfDetailView = null;
   activeScenario = message.scenario === WRKPTFGRP
     ? WRKPTFGRP
     : { system: "CURATOR", ptfs, productId, release };
@@ -173,7 +187,7 @@ window.parent.postMessage({ type: "ironterm:ready" }, window.location.origin);
 // Parser internals are available only on an explicitly local development host.
 if (location.hostname === "localhost" || location.hostname === "127.0.0.1") {
   Object.defineProperty(window, "scenarioTerminal", {
-    value: Object.freeze({ screen, parser, builder, loadScenario, Aid, buildDspptfStatusRecords, buildWrkptfgrpRecords }),
+    value: Object.freeze({ screen, parser, builder, loadScenario, Aid, buildDspptfStatusRecords, buildDspptfDetailRecords, buildWrkptfgrpRecords }),
     configurable: false,
     writable: false,
   });

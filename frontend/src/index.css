@@ -816,6 +816,34 @@ a {
   line-height: 1.4;
 }
 
+.issue-summary-grid {
+  display: grid;
+  gap: 0;
+  border: 1px solid var(--line);
+}
+
+.issue-summary-grid article {
+  display: grid;
+  grid-template-columns: 72px 1fr;
+  gap: 0.65rem;
+  padding: 0.65rem 0.7rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.issue-summary-grid article:last-child { border-bottom: 0; }
+.issue-summary-grid span {
+  color: var(--green);
+  font: 0.66rem "IBM Plex Mono", monospace;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.issue-summary-grid p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
 .issue-hero {
   display: grid;
   gap: 0.45rem;
@@ -2096,8 +2124,8 @@ iframe:focus-visible {
 
 .verification-frame-wrap {
   height: auto;
-  min-height: 420px;
-  flex: 1 1 420px;
+  min-height: 330px;
+  flex: 1 1 330px;
   margin: 0 0.9rem 0.9rem;
 }
 
@@ -2180,6 +2208,26 @@ iframe:focus-visible {
 .sql-evidence-body {
   padding-bottom: 0.1rem;
   border-top: 1px solid var(--line);
+}
+
+.sql-evidence-target {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.55rem 0.7rem;
+  border-top: 1px solid var(--line);
+  background: rgba(111, 217, 154, 0.04);
+}
+
+.sql-evidence-target span {
+  color: var(--muted);
+  font: 0.62rem "IBM Plex Mono", monospace;
+  text-transform: uppercase;
+}
+
+.sql-evidence-target code {
+  color: var(--green);
+  font: 0.72rem "IBM Plex Mono", monospace;
+  overflow-wrap: anywhere;
 }
 
 .sql-evidence-grid {

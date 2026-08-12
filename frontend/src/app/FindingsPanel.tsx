@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ActionLane } from "./ActionLanesFlow";
 import type { Bucket, Bulletin, Finding } from "../types";
-import { PLATFORM_LABELS } from "../types";
 import { hasIndividualPtfEvidence } from "../ptfEvidence";
 
 interface Props {
@@ -346,7 +345,7 @@ export function FindingsPanel({
               const selected = selectedId === f.cve_id;
               return <button key={f.cve_id} type="button" data-cve={f.cve_id} className={`finding-row finding-row-child ${selected ? "selected" : ""}`} onClick={() => onSelect(f)}>
                 <div className="finding-top"><span className="cve-id">{f.cve_id}</span><span className="score-pill">{f.score.toFixed(0)}</span></div>
-                <div className="finding-meta">{f.cvss_score != null && <span>CVSS {f.cvss_score}</span>}{f.epss != null && <span>EPSS {(f.epss * 100).toFixed(1)}%</span>}<span className={`badge ${f.bucket}`}>{f.bucket}</span>{f.action_lane && <span className={`badge badge-lane lane-${f.action_lane}`}>{f.action_lane}</span>}{hasPtfEvidence(f) && <span className="badge badge-ptf">PTF</span>}{pasteHitIds.includes(f.cve_id) && <span className="badge badge-paste">paste match</span>}{f.platforms.slice(0, 1).map((p) => <span key={p.platform} className="badge badge-platform">{PLATFORM_LABELS[p.platform]}</span>)}</div>
+                <div className="finding-meta">{f.cvss_score != null && <span>CVSS {f.cvss_score}</span>}{f.epss != null && <span>EPSS {(f.epss * 100).toFixed(1)}%</span>}<span className={`badge ${f.bucket}`}>{f.bucket}</span>{f.action_lane && <span className={`badge badge-lane lane-${f.action_lane}`}>{f.action_lane}</span>}{hasPtfEvidence(f) && <span className="badge badge-ptf">PTF</span>}{pasteHitIds.includes(f.cve_id) && <span className="badge badge-paste">paste match</span>}</div>
               </button>;
             })}</div>}
           </section>

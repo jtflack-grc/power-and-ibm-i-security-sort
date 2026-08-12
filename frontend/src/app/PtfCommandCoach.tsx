@@ -4,10 +4,12 @@ import { extractPtfEvidence } from "../ptfEvidence";
 
 interface Props {
   finding: Finding | null;
+  evidenceOverride?: ReturnType<typeof extractPtfEvidence>;
 }
 
-export function PtfCommandCoach({ finding }: Props) {
-  const evidence = useMemo(() => extractPtfEvidence(finding), [finding]);
+export function PtfCommandCoach({ finding, evidenceOverride }: Props) {
+  const extracted = useMemo(() => extractPtfEvidence(finding), [finding]);
+  const evidence = evidenceOverride ?? extracted;
   const ptf = evidence.ptfs[0] ?? null;
   const group = evidence.groups[0] ?? null;
   const apar = evidence.apars[0] ?? null;
@@ -51,12 +53,12 @@ export function PtfCommandCoach({ finding }: Props) {
         </article>
         <article className="command-coach-step">
           <span className="command-coach-number">02 · Inspect</span>
-          <code>{ptf ? "5=Display PTF details" : "Match product · release · installed level"}</code>
+          <code>{ptf ? `Enter 5 beside ${ptf}, then press Enter` : group ? `Enter 5 beside ${group}, then press Enter` : "Match product · release · installed level"}</code>
           <p>{ptf ? "Use option 5 to inspect status details and cover-letter instructions. Record any prerequisites, delayed apply, or IPL requirement before scheduling the change." : "Match the installed product and release exactly. A CVE, APAR, PTF group, and downloadable fix identify different parts of the remediation chain."}</p>
         </article>
         <article className="command-coach-step">
           <span className="command-coach-number">03 · Widen</span>
-          <code>{group ? "5=Display PTF group" : "WRKPTFGRP PTFGRP(*ALL)"}</code>
+          <code>{group ? `WRKPTFGRP PTFGRP(${group})` : "WRKPTFGRP PTFGRP(*ALL)"}</code>
           <p>{group ? "Review the selected group and its level. A group can contain the required fix even when the individual PTF is superseded." : "Review all installed PTF groups for the release. One applied PTF does not prove that the cumulative, HIPER, or product group is current."}</p>
         </article>
       </div>

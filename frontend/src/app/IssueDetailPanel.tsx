@@ -19,16 +19,10 @@ interface Props {
 
 type IssueSection = "overview" | "workflow" | "fix" | "interim";
 
-function plainOverview(finding: Finding): string {
-  const fixPath = finding.resolution_steps?.some((step) => ["ptf", "ptf_group", "apar"].includes(String(step.kind)))
-    ? "IBM has published a fix path for at least one affected product and release."
-    : "A specific downloadable fix was not recovered from the bulletin, so the item still needs research.";
-  const urgency = finding.on_kev
-    ? "Attackers are known to be using this weakness, so confirm exposure promptly."
-    : finding.bucket === "urgent"
-      ? "Treat it as a priority until you confirm whether your partition is affected."
-      : "Confirm that your installed product and IBM i release appear in IBM's affected-product table.";
-  return `${urgency} ${fixPath} Open Resolve for IBM's remedy, then use Evidence to check the partition.`;
+function cleanSentence(value: string | undefined, fallback: string): string {
+  if (!value) return fallback;
+  const text = value.replace(/https?:\/\/\S+/g, "").replace(/\s+/g, " ").trim();
+  return text.length > 220 ? `${text.slice(0, 217).trim()}…` : text;
 }
 
 export function IssueDetailPanel({ finding, shop, bulletin, generatedAt }: Props) {
@@ -57,6 +51,14 @@ export function IssueDetailPanel({ finding, shop, bulletin, generatedAt }: Props
   const interims = finding.interim_mitigations ?? [];
   const hasPackage = steps.some((s) =>
     ["ptf", "apar", "bulletin"].includes(String(s.kind ?? ""))
+  );
+  const resolveSummary = cleanSentence(
+    steps.find((step) => ["ptf", "ptf_group", "apar", "bulletin"].includes(String(step.kind)))?.detail,
+    "Confirm your product and release in IBM's bulletin, then identify the matching fix package."
+  );
+  const interimSummary = cleanSentence(
+    interims[0]?.detail,
+    "If the fix cannot be applied yet, reduce exposure and monitor the affected service until the change is complete."
   );
 
   const downloadPacket = () => {
@@ -101,7 +103,11 @@ export function IssueDetailPanel({ finding, shop, bulletin, generatedAt }: Props
         </button>
         {openSection === "overview" && <div className="issue-accordion-body">
           <p className="issue-plain-title">{finding.title}</p>
-          <p className="issue-desc">{plainOverview(finding)}</p>
+          <div className="issue-summary-grid">
+            <article><span>Act</span><p>{finding.on_kev ? "Confirm exposure now; this vulnerability has known exploitation." : finding.action_lane === "contain" ? "Reduce exposure while the permanent fix is prepared." : "Confirm the affected product and release, then plan the IBM fix."}</p></article>
+            <article><span>Resolve</span><p>{resolveSummary}</p></article>
+            <article><span>Until then</span><p>{interimSummary}</p></article>
+          </div>
           <div className="badges">
             {finding.on_kev && <span className="badge kev">KEV</span>}
             {finding.action_lane && <span className={`badge badge-lane lane-${finding.action_lane}`}>{finding.action_lane}</span>}
