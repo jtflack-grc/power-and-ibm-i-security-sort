@@ -17,7 +17,7 @@ interface Props {
   generatedAt?: string | null;
 }
 
-type IssueSection = "overview" | "workflow" | "fix" | "interim";
+type IssueSection = "act" | "resolve" | "interim";
 
 function cleanSentence(value: string | undefined, fallback: string): string {
   if (!value) return fallback;
@@ -26,13 +26,13 @@ function cleanSentence(value: string | undefined, fallback: string): string {
 }
 
 export function IssueDetailPanel({ finding, shop, bulletin, generatedAt }: Props) {
-  const [openSection, setOpenSection] = useState<IssueSection | null>("overview");
+  const [openSections, setOpenSections] = useState<Set<IssueSection>>(() => new Set());
   const [copied, setCopied] = useState(false);
   const [workflow, setWorkflow] = useState<CaseWorkflow>(() => finding ? loadCaseWorkflow(finding.cve_id) : loadCaseWorkflow("none"));
 
   useEffect(() => {
     if (finding) {
-      setOpenSection("overview");
+      setOpenSections(new Set());
       setWorkflow(loadCaseWorkflow(finding.cve_id));
     }
     setCopied(false);
@@ -60,6 +60,23 @@ export function IssueDetailPanel({ finding, shop, bulletin, generatedAt }: Props
     interims[0]?.detail,
     "If the fix cannot be applied yet, reduce exposure and monitor the affected service until the change is complete."
   );
+  const actSummary = finding.on_kev
+    ? "Confirm whether the affected component is exposed and open an expedited change: exploitation is documented in CISA KEV."
+    : finding.action_lane === "contain"
+      ? "Validate exposure now, reduce the reachable attack surface, and hold the item open until the permanent fix is verified."
+      : "Confirm the affected product and release, assign an owner, and route the matching IBM fix through change control.";
+  const standardCues = [
+    ...(finding.owasp_top10 ?? []).map((category) => ({
+      label: "OWASP",
+      text: `${category}: use the mapped weakness to focus code, configuration, access-control, or dependency review.`,
+      url: "https://owasp.org/Top10/",
+    })),
+    {
+      label: "NIST CSF 2.0",
+      text: "RS.MI / PR.PS: contain exposure where necessary, remediate through controlled platform maintenance, and retain verification evidence.",
+      url: "https://www.nist.gov/cyberframework",
+    },
+  ];
 
   const downloadPacket = () => {
     const md = changePacketMarkdown(finding, shop, { bulletin, generatedAt, workflow });
@@ -85,7 +102,12 @@ export function IssueDetailPanel({ finding, shop, bulletin, generatedAt }: Props
 
   const ibmUrl = normalizeIbmBulletinUrl(finding.ibm_bulletin_url, finding.cve_id);
   const toggle = (section: IssueSection) => {
-    setOpenSection((current) => current === section ? null : section);
+    setOpenSections((current) => {
+      const next = new Set(current);
+      if (next.has(section)) next.delete(section);
+      else next.add(section);
+      return next;
+    });
   };
 
   return (
@@ -97,31 +119,23 @@ export function IssueDetailPanel({ finding, shop, bulletin, generatedAt }: Props
         </div>
       </div>
 
-      <div className="issue-accordions">
-        <button type="button" className="issue-accordion-toggle" aria-expanded={openSection === "overview"} onClick={() => toggle("overview")}>
-          <span>Overview</span><strong>{finding.title}</strong>
-        </button>
-        {openSection === "overview" && <div className="issue-accordion-body">
-          <p className="issue-plain-title">{finding.title}</p>
-          <div className="issue-summary-grid">
-            <article><span>Act</span><p>{finding.on_kev ? "Confirm exposure now; this vulnerability has known exploitation." : finding.action_lane === "contain" ? "Reduce exposure while the permanent fix is prepared." : "Confirm the affected product and release, then plan the IBM fix."}</p></article>
-            <article><span>Resolve</span><p>{resolveSummary}</p></article>
-            <article><span>Until then</span><p>{interimSummary}</p></article>
-          </div>
-          <div className="badges">
-            {finding.on_kev && <span className="badge kev">KEV</span>}
-            {finding.action_lane && <span className={`badge badge-lane lane-${finding.action_lane}`}>{finding.action_lane}</span>}
-            {finding.risk_surface && finding.risk_surface !== "platform" && <span className="badge badge-supply">{finding.risk_surface === "mixed" ? "Mixed / TPRM" : "Supply chain"}</span>}
-            {finding.cvss_score != null && <span className="badge">CVSS {finding.cvss_score}</span>}
-            {finding.epss != null && <span className="badge">EPSS {(finding.epss * 100).toFixed(1)}%</span>}
-            {finding.platforms.map((p) => <span key={p.platform} className="badge badge-platform">{PLATFORM_LABELS[p.platform]}</span>)}
-          </div>
-        </div>}
+      <div className="issue-brief">
+        <p className="issue-plain-title">{finding.title}</p>
+        <div className="badges">
+          {finding.on_kev && <span className="badge kev">KEV</span>}
+          {finding.action_lane && <span className={`badge badge-lane lane-${finding.action_lane}`}>{finding.action_lane}</span>}
+          {finding.cvss_score != null && <span className="badge">CVSS {finding.cvss_score}</span>}
+          {finding.epss != null && <span className="badge">EPSS {(finding.epss * 100).toFixed(1)}%</span>}
+          {finding.platforms.map((p) => <span key={p.platform} className="badge badge-platform">{PLATFORM_LABELS[p.platform]}</span>)}
+        </div>
+      </div>
 
-        <button type="button" className="issue-accordion-toggle" aria-expanded={openSection === "workflow"} onClick={() => toggle("workflow")}>
-          <span>Act</span><strong>Sources, decision and change packet</strong>
+      <div className="issue-accordions">
+        <button type="button" className="issue-accordion-toggle" aria-expanded={openSections.has("act")} onClick={() => toggle("act")}>
+          <span>Act</span><strong>{actSummary}</strong>
         </button>
-        {openSection === "workflow" && <div className="issue-accordion-body">
+        {openSections.has("act") && <div className="issue-accordion-body">
+          <p className="dive-lead">Establish applicability, exposure, ownership, urgency, and the evidence required to close the decision.</p>
           <div className="issue-links">
             <a href={cveRecordUrl(finding.cve_id)} target="_blank" rel="noreferrer">CVE Record ↗</a>
             <a href={nvdDetailUrl(finding.cve_id)} target="_blank" rel="noreferrer">NVD ↗</a>
@@ -130,12 +144,15 @@ export function IssueDetailPanel({ finding, shop, bulletin, generatedAt }: Props
             <button type="button" className="linkish" onClick={downloadPacket}>Download .md</button>
           </div>
           <CaseWorkflowPanel value={workflow} onChange={(next) => { setWorkflow(next); saveCaseWorkflow(finding.cve_id, next); }} />
+          <div className="issue-guidance-grid">
+            {standardCues.map((cue, index) => <article key={`${cue.label}-${index}`}><span>{cue.label}</span><p>{cue.text}</p><a href={cue.url} target="_blank" rel="noreferrer">Reference ↗</a></article>)}
+          </div>
         </div>}
 
-        <button type="button" className="issue-accordion-toggle" aria-expanded={openSection === "fix"} onClick={() => toggle("fix")}>
-          <span>Resolve</span><strong>{hasPackage ? "Bulletin and fix package" : "Research the fix package"}</strong>
+        <button type="button" className="issue-accordion-toggle" aria-expanded={openSections.has("resolve")} onClick={() => toggle("resolve")}>
+          <span>Resolve</span><strong>{resolveSummary}</strong>
         </button>
-      {openSection === "fix" && (
+      {openSections.has("resolve") && (
         <div className="dive-list">
           <p className="dive-lead">
             {hasPackage
@@ -166,10 +183,10 @@ export function IssueDetailPanel({ finding, shop, bulletin, generatedAt }: Props
         </div>
       )}
 
-        <button type="button" className="issue-accordion-toggle" aria-expanded={openSection === "interim"} onClick={() => toggle("interim")}>
-          <span>Interim</span><strong>Reduce exposure before the change</strong>
+        <button type="button" className="issue-accordion-toggle" aria-expanded={openSections.has("interim")} onClick={() => toggle("interim")}>
+          <span>Interim</span><strong>{interimSummary}</strong>
         </button>
-      {openSection === "interim" && (
+      {openSections.has("interim") && (
         <div className="dive-list">
           <p className="dive-lead">
             Authority, exposure, TLS, and verify steps that buy time without closing the CVE.
