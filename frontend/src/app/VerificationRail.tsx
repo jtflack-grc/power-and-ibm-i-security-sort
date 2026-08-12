@@ -120,16 +120,27 @@ export function VerificationRail({ finding, bulletin = null, terminalHost = null
     window.setTimeout(() => setCopiedSql((current) => current === kind ? null : current), 1400);
   };
 
+  const activeCommand = terminalScenario === "wrkptfgrp"
+    ? `WRKPTFGRP PTFGRP(${groups[0] ?? "*ALL"})`
+    : `DSPPTF LICPGM(${scenarioMeta.productId || "product"}) SELECT(${ptfs[0] ?? "ptf"})`;
+
   const terminalFrame = hasTerminalPath ? (
     <div className="verification-frame-wrap verification-frame-wide">
-      <iframe
-        ref={frameRef}
-        className="verification-frame"
-        src="./ironterm/index.html"
-        title={terminalScenario === "wrkptfgrp" ? "IronTerm Work with PTF Groups scenario" : "IronTerm Display PTF Status scenario"}
-        sandbox="allow-scripts allow-same-origin"
-        referrerPolicy="no-referrer"
-      />
+      <div className="verification-terminal-window">
+        <div className="verification-terminal-bar">
+          <span>IBM i verification</span>
+          <code>{activeCommand}</code>
+          <span>{scenarioMeta.release || "selected release"}</span>
+        </div>
+        <iframe
+          ref={frameRef}
+          className="verification-frame"
+          src="./ironterm/index.html"
+          title={terminalScenario === "wrkptfgrp" ? "IronTerm Work with PTF Groups scenario" : "IronTerm Display PTF Status scenario"}
+          sandbox="allow-scripts allow-same-origin"
+          referrerPolicy="no-referrer"
+        />
+      </div>
     </div>
   ) : null;
 
