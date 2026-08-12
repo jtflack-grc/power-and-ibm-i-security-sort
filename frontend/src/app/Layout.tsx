@@ -72,7 +72,6 @@ export function Layout({
   const [laneFilter, setLaneFilter] = useState<ActionLane | "all">("all");
   const [showFlagship, setShowFlagship] = useState(true);
   const [showFeedSources, setShowFeedSources] = useState(false);
-  const [terminalHost, setTerminalHost] = useState<HTMLDivElement | null>(null);
 
   const findings = useMemo(() => result?.findings ?? [], [result?.findings]);
   const publishedStamp = formatStamp(result?.generated_at);
@@ -370,17 +369,9 @@ export function Layout({
                 />
               </div>
             )}
-            <VerificationRail
-              finding={selectedResolved}
-              bulletin={selectedBulletin}
-              terminalHost={terminalHost}
-            />
+            <VerificationRail finding={selectedResolved} bulletin={selectedBulletin} />
           </div>
         </section>
-        <div
-          ref={setTerminalHost}
-          className={`verification-terminal-slot ${pane !== "flow" ? "hidden-mobile" : ""}`}
-        />
       </main>
 
       <footer className="site-footer">

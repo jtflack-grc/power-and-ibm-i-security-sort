@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import type { Bulletin, Finding } from "../types";
 import { extractPtfEvidence } from "../ptfEvidence";
 import { RemediationAssist } from "./RemediationAssist";
@@ -8,14 +7,13 @@ import { PtfCommandCoach } from "./PtfCommandCoach";
 interface Props {
   finding: Finding | null;
   bulletin?: Bulletin | null;
-  terminalHost?: HTMLElement | null;
 }
 
 function sqlLiteral(value: string): string {
   return `'${value.replaceAll("'", "''")}'`;
 }
 
-export function VerificationRail({ finding, bulletin = null, terminalHost = null }: Props) {
+export function VerificationRail({ finding, bulletin = null }: Props) {
   const frameRef = useRef<HTMLIFrameElement>(null);
   const channelTokenRef = useRef(crypto.randomUUID());
   const [showSources, setShowSources] = useState(false);
@@ -120,27 +118,16 @@ export function VerificationRail({ finding, bulletin = null, terminalHost = null
     window.setTimeout(() => setCopiedSql((current) => current === kind ? null : current), 1400);
   };
 
-  const activeCommand = terminalScenario === "wrkptfgrp"
-    ? `WRKPTFGRP PTFGRP(${groups[0] ?? "*ALL"})`
-    : `DSPPTF LICPGM(${scenarioMeta.productId || "product"}) SELECT(${ptfs[0] ?? "ptf"})`;
-
   const terminalFrame = hasTerminalPath ? (
     <div className="verification-frame-wrap verification-frame-wide">
-      <div className="verification-terminal-window">
-        <div className="verification-terminal-bar">
-          <span>IBM i verification</span>
-          <code>{activeCommand}</code>
-          <span>{scenarioMeta.release || "selected release"}</span>
-        </div>
-        <iframe
-          ref={frameRef}
-          className="verification-frame"
-          src="./ironterm/index.html"
-          title={terminalScenario === "wrkptfgrp" ? "IronTerm Work with PTF Groups scenario" : "IronTerm Display PTF Status scenario"}
-          sandbox="allow-scripts allow-same-origin"
-          referrerPolicy="no-referrer"
-        />
-      </div>
+      <iframe
+        ref={frameRef}
+        className="verification-frame"
+        src="./ironterm/index.html"
+        title={terminalScenario === "wrkptfgrp" ? "IronTerm Work with PTF Groups scenario" : "IronTerm Display PTF Status scenario"}
+        sandbox="allow-scripts allow-same-origin"
+        referrerPolicy="no-referrer"
+      />
     </div>
   ) : null;
 
@@ -242,11 +229,7 @@ export function VerificationRail({ finding, bulletin = null, terminalHost = null
         </div>
       )}
       </div>
-      {fullscreen
-        ? terminalFrame
-        : terminalFrame && terminalHost
-          ? createPortal(terminalFrame, terminalHost)
-          : null}
+      {terminalFrame}
     </section>
   );
 }
