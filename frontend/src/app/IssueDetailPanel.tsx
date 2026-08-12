@@ -77,6 +77,12 @@ export function IssueDetailPanel({ finding, shop, bulletin, generatedAt }: Props
       url: "https://www.nist.gov/cyberframework",
     },
   ];
+  const applicability = bulletin?.applicability ?? [];
+  const productScope = [...new Set(applicability.map((row) => row.product_name).filter(Boolean))];
+  const releaseScope = [...new Set(applicability.map((row) => row.release_system || row.release).filter(Boolean))];
+  const exposureState = finding.on_kev ? "Immediate validation" : "Confirm locally";
+  const fixState = hasPackage ? "IBM fix identified" : "Package unresolved";
+  const closureEvidence = hasPackage ? "SQL result + DSPPTF / WRKPTFGRP" : "Applicability decision + monitored exception";
 
   const downloadPacket = () => {
     const md = changePacketMarkdown(finding, shop, { bulletin, generatedAt, workflow });
@@ -130,9 +136,21 @@ export function IssueDetailPanel({ finding, shop, bulletin, generatedAt }: Props
         </div>
       </div>
 
+      <section className="decision-glance" aria-label="Decision at a glance">
+        <h3>Decision at a glance</h3>
+        <dl>
+          <div><dt>Urgency</dt><dd>{finding.bucket}{finding.on_kev ? " · KEV" : ""}</dd></div>
+          <div><dt>Exposure</dt><dd>{exposureState}</dd></div>
+          <div><dt>Scope</dt><dd>{productScope.slice(0, 2).join(", ") || "IBM i product"}{releaseScope.length ? ` · ${releaseScope.join(", ")}` : ""}</dd></div>
+          <div><dt>Fix</dt><dd>{fixState}</dd></div>
+          <div><dt>Next</dt><dd>{finding.action_lane === "contain" ? "Contain, then schedule remediation" : finding.action_lane === "monitor" ? "Track vendor remediation" : "Validate and route the fix"}</dd></div>
+          <div><dt>Closure</dt><dd>{closureEvidence}</dd></div>
+        </dl>
+      </section>
+
       <div className="issue-accordions">
         <button type="button" className="issue-accordion-toggle" aria-expanded={openSections.has("act")} onClick={() => toggle("act")}>
-          <span>Act</span><strong>{actSummary}</strong>
+          <span>Act</span><strong>{actSummary}</strong><small>{openSections.has("act") ? "Close details" : "Open details"}</small>
         </button>
         {openSections.has("act") && <div className="issue-accordion-body">
           <p className="dive-lead">Establish applicability, exposure, ownership, urgency, and the evidence required to close the decision.</p>
@@ -150,7 +168,7 @@ export function IssueDetailPanel({ finding, shop, bulletin, generatedAt }: Props
         </div>}
 
         <button type="button" className="issue-accordion-toggle" aria-expanded={openSections.has("resolve")} onClick={() => toggle("resolve")}>
-          <span>Resolve</span><strong>{resolveSummary}</strong>
+          <span>Resolve</span><strong>{resolveSummary}</strong><small>{openSections.has("resolve") ? "Close details" : "Open details"}</small>
         </button>
       {openSections.has("resolve") && (
         <div className="dive-list">
@@ -184,7 +202,7 @@ export function IssueDetailPanel({ finding, shop, bulletin, generatedAt }: Props
       )}
 
         <button type="button" className="issue-accordion-toggle" aria-expanded={openSections.has("interim")} onClick={() => toggle("interim")}>
-          <span>Interim</span><strong>{interimSummary}</strong>
+          <span>Interim</span><strong>{interimSummary}</strong><small>{openSections.has("interim") ? "Close details" : "Open details"}</small>
         </button>
       {openSections.has("interim") && (
         <div className="dive-list">
