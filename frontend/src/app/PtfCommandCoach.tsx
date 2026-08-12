@@ -34,12 +34,9 @@ export function PtfCommandCoach({ finding, evidenceOverride }: Props) {
           {finding ? `${finding.cve_id}: ${route} route.` : "Select a finding to hydrate its evidence route."}
         </p>
       </div>
-      <p className="command-coach-help">
-        Start by choosing the IBM i release and product from the fix-row selector below. Run the shown command on that partition, compare the installed state with IBM&apos;s bulletin, and retain the result with the partition name and collection time.
-      </p>
       <div className="command-coach-steps">
         <article className="command-coach-step is-primary">
-          <span className="command-coach-number">01 · Locate</span>
+          <span className="command-coach-number">01 · Run</span>
           <code>{displayCommand}</code>
           <p>
             {ptf
@@ -52,13 +49,13 @@ export function PtfCommandCoach({ finding, evidenceOverride }: Props) {
           </p>
         </article>
         <article className="command-coach-step">
-          <span className="command-coach-number">02 · Inspect</span>
+          <span className="command-coach-number">02 · Open detail</span>
           <code>{ptf ? `Enter 5 beside ${ptf}, then press Enter` : group ? `Enter 5 beside ${group}, then press Enter` : "Match product · release · installed level"}</code>
           <p>{ptf ? "Use option 5 to inspect status details and cover-letter instructions. Record any prerequisites, delayed apply, or IPL requirement before scheduling the change." : "Match the installed product and release exactly. A CVE, APAR, PTF group, and downloadable fix identify different parts of the remediation chain."}</p>
         </article>
         <article className="command-coach-step">
-          <span className="command-coach-number">03 · Widen</span>
-          <code>{group ? `WRKPTFGRP PTFGRP(${group})` : "WRKPTFGRP PTFGRP(*ALL)"}</code>
+          <span className="command-coach-number">03 · Check group context</span>
+          <code>WRKPTFGRP PTFGRP(*ALL)</code>
           <p>{group ? "Review the selected group and its level. A group can contain the required fix even when the individual PTF is superseded." : "Review all installed PTF groups for the release. One applied PTF does not prove that the cumulative, HIPER, or product group is current."}</p>
         </article>
       </div>
