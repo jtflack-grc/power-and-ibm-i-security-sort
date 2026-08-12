@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Bulletin, Finding } from "../types";
 import { extractPtfEvidence } from "../ptfEvidence";
 import { RemediationAssist } from "./RemediationAssist";
+import { PtfCommandCoach } from "./PtfCommandCoach";
 
 interface Props {
   finding: Finding | null;
@@ -16,7 +17,7 @@ export function VerificationRail({ finding, bulletin = null }: Props) {
   const frameRef = useRef<HTMLIFrameElement>(null);
   const channelTokenRef = useRef(crypto.randomUUID());
   const [showSources, setShowSources] = useState(false);
-  const [showSql, setShowSql] = useState(false);
+  const [showSql, setShowSql] = useState(true);
   const [copiedSql, setCopiedSql] = useState<"group" | "ptf" | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
   const applicableRows = useMemo(
@@ -28,6 +29,7 @@ export function VerificationRail({ finding, bulletin = null }: Props) {
   const [applicabilityId, setApplicabilityId] = useState("");
   useEffect(() => {
     setApplicabilityId(applicableRows.length === 1 ? applicableRows[0].applicability_id : "");
+    setShowSql(true);
   }, [finding?.cve_id, applicableRows]);
   const selectedApplicability = applicableRows.find((row) => row.applicability_id === applicabilityId);
   const fallbackMeta = useMemo(() => extractPtfEvidence(finding), [finding]);
@@ -150,7 +152,7 @@ export function VerificationRail({ finding, bulletin = null }: Props) {
           </a>
           <span>IronTerm TN5250 · GPL-3.0 · transport and credentials disabled</span>
           <span>Fixture levels use IBM's public 7.4 group table; system statuses are synthetic.</span>
-          <span>Option 5 remains gated until its destination screen has coordinate evidence.</span>
+          <span>Individual-PTF option 5 opens a bounded General Information fixture; group details and alternate pages remain gated.</span>
         </div>
       )}
       {applicableRows.length > 1 && (
@@ -166,6 +168,7 @@ export function VerificationRail({ finding, bulletin = null }: Props) {
           </select>
         </label>
       )}
+      <PtfCommandCoach finding={finding} evidenceOverride={scenarioMeta} />
       {hasTerminalPath ? (
         <>
           {hasPtfPath && hasGroupPath && (
@@ -181,6 +184,10 @@ export function VerificationRail({ finding, bulletin = null }: Props) {
                 <button type="button" onClick={() => void copySql("group")}>{copiedSql === "group" ? "Copied" : "Copy group SQL"}</button>
                 <button type="button" onClick={() => void copySql("ptf")}>{copiedSql === "ptf" ? "Copied" : "Copy PTF SQL"}</button>
                 <button type="button" aria-expanded={showSql} onClick={() => setShowSql((value) => !value)}>{showSql ? "Hide queries" : "Preview queries"}</button>
+              </div>
+              <div className="sql-evidence-target">
+                <span>Selected scope</span>
+                <code>{scenarioMeta.productId || "select product"} · {scenarioMeta.release || "select release"} · {[...ptfs, ...groups].join(", ") || "select fix row"}</code>
               </div>
               {showSql && (
                 <div className="sql-evidence-body">

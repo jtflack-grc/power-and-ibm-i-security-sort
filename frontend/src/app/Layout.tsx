@@ -7,7 +7,6 @@ import { FindingsPanel } from "./FindingsPanel";
 import { IssueDetailPanel } from "./IssueDetailPanel";
 import { LiveFailCallout, LiveWaitCallout } from "./LiveStatusCallouts";
 import { LiveProgressBanner } from "./LiveProgressBanner";
-import { PtfCommandCoach } from "./PtfCommandCoach";
 import { VerificationRail } from "./VerificationRail";
 
 type Pane = "findings" | "issue" | "flow";
@@ -370,8 +369,7 @@ export function Layout({
                 />
               </div>
             )}
-            <PtfCommandCoach finding={selectedResolved} />
-              <VerificationRail finding={selectedResolved} bulletin={selectedBulletin} />
+            <VerificationRail finding={selectedResolved} bulletin={selectedBulletin} />
           </div>
         </section>
       </main>

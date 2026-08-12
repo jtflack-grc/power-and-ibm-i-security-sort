@@ -101,4 +101,41 @@ export function buildDspptfStatusRecords({
   return [stream];
 }
 
+export function buildDspptfDetailRecords({
+  system = "CURATOR",
+  ptf = "SI76195",
+  productId = "5770SS1",
+  release = "V7R4M0",
+} = {}) {
+  const stream = [ESC, CU, ESC, CFT, ESC, WTD, 0x00, 0x08];
+  stream.push(SOH, 0x07, 0x00, 0x00, 0x00, 0x24, 0xff, 0xef, 0xff);
+  const writes = [
+    [1, 31, "General Information", 0x22],
+    [2, 61, `System:   ${system}`.slice(0, 20), 0x22],
+    [4, 2, `Product ID  . . . . . . . . . . . . . :   ${productId}`],
+    [5, 2, `PTF ID  . . . . . . . . . . . . . . . :   ${ptf}`],
+    [6, 2, `Release . . . . . . . . . . . . . . . :   ${release}`],
+    [7, 2, "On order . . . . . . . . . . . . . . :   No"],
+    [8, 2, "PTF save file  . . . . . . . . . . . :   No"],
+    [9, 2, "PTF status . . . . . . . . . . . . . :   Permanently applied"],
+    [10, 2, "Latest superseding PTF . . . . . . . :   None"],
+    [11, 2, "Status date/time . . . . . . . . . . :   Synthetic fixture"],
+    [13, 2, "Unattended IPL action . . . . . . . . :   None"],
+    [14, 2, "Optional part  . . . . . . . . . . . :   *BASE"],
+    [15, 2, "PTF library  . . . . . . . . . . . . :   QGPL"],
+    [16, 2, "Cover letter  . . . . . . . . . . . . :   Available from IBM"],
+    [17, 2, "Mandatory instructions . . . . . . . :   Review IBM fix page"],
+    [19, 2, "Action pending  . . . . . . . . . . . :   None"],
+    [20, 2, "Action required . . . . . . . . . . . :   None"],
+    [21, 2, `Target release  . . . . . . . . . . . :   ${release}`],
+    [23, 2, "F3=Exit   F12=Cancel", 0x30],
+  ];
+  for (const [row, col, value, attr] of writes) {
+    assertFits(row, col, value);
+    stream.push(...text(row, col, value, attr));
+  }
+  stream.push(ESC, RMDT, 0x00, 0x08);
+  return [stream];
+}
+
 export const fallbackDspptfRows = fallbackRows.map(([ptf, status, action]) => ({ ptf, status, action }));

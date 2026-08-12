@@ -211,7 +211,7 @@
     {
       "id": "DSPPTF_DETAILS_MENU",
       "title": "Display PTF Details",
-      "fixtureStatus": "content_ready_layout_pending",
+      "fixtureStatus": "enabled_bounded_fixture",
       "flowRole": "Select the detail category for a PTF",
       "lclAssessment": "LCL currently skips this menu and goes directly to a flattened general-information panel. Do not reuse that navigation unchanged.",
       "confirmedBehavior": [
@@ -251,6 +251,12 @@
         },
         {
           "tier": "A",
+          "title": "IBM MySupport — published PTF fix information example",
+          "url": "https://www.ibm.com/mysupport/s/fix-information/aDrgJ0000009U3hSAE/fi0140606?language=en_US",
+          "supports": ["published PTF metadata", "green-screen field labels reproduced in fixed-width text"]
+        },
+        {
+          "tier": "A",
           "title": "IBM Support — What PTF is for What release of Java?",
           "url": "https://www.ibm.com/support/pages/what-ptf-what-release-java",
           "supports": ["exact dotted labels for Optional part and PTF library"]
@@ -274,7 +280,8 @@
           "supports": ["detailed data model", "candidate row placement", "cover-letter wrapping"]
         }
       ],
-      "remainingGate": "Obtain a full General Information screen capture and resolve which fields require multiple pages or alternate views at 24x80."
+      "validation": "Enabled as a bounded 24x80 General Information fixture reached with option 5. Product, release, and PTF ID are selected bulletin values; installed status and partition fields remain explicitly synthetic.",
+      "remainingGate": "Additional pages and alternate views remain disabled until separately source-validated."
     }
   ]
 }

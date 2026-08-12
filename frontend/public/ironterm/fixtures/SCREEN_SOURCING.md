@@ -14,7 +14,7 @@ must not be collapsed:
 | WRKPTFGRP | Strong structural candidate | Complete IBM Redbook initial/F11 panels, December 2024 IBM screen examples, current 7.4 group levels, and current command/SQL-service semantics | Implemented for preview; hold public enablement for John visual acceptance |
 | DSPPTFGRP | Strong structural candidate | Navigation, F19, F6, and status behavior identified | Hold for full-panel capture |
 | Display PTF Status | Missing as a distinct LCL panel | Two IBM technotes contain preformatted screen output | Ready to encode |
-| Display PTF Details menu | LCL currently skips it | IBM confirms the menu and option 1 | Hold for full-panel capture |
+| DSPPTF option 5 / General Information | Bounded selected-PTF fixture enabled | IBM field inventory and published fix metadata | Alternate pages remain gated |
 | General Information | LCL has useful fields but flattened navigation | IBM confirms the full field inventory and exact dotted labels for key fields | Hold for full-panel capture/paging decision |
 
 ## Correction to the LCL flow
