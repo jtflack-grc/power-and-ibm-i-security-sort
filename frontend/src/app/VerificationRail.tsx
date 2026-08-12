@@ -17,7 +17,7 @@ export function VerificationRail({ finding, bulletin = null }: Props) {
   const frameRef = useRef<HTMLIFrameElement>(null);
   const channelTokenRef = useRef(crypto.randomUUID());
   const [showSources, setShowSources] = useState(false);
-  const [showSql, setShowSql] = useState(true);
+  const [showSql, setShowSql] = useState(false);
   const [copiedSql, setCopiedSql] = useState<"group" | "ptf" | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
   const applicableRows = useMemo(
@@ -29,7 +29,7 @@ export function VerificationRail({ finding, bulletin = null }: Props) {
   const [applicabilityId, setApplicabilityId] = useState("");
   useEffect(() => {
     setApplicabilityId(applicableRows.length === 1 ? applicableRows[0].applicability_id : "");
-    setShowSql(true);
+    setShowSql(false);
   }, [finding?.cve_id, applicableRows]);
   const selectedApplicability = applicableRows.find((row) => row.applicability_id === applicabilityId);
   const fallbackMeta = useMemo(() => extractPtfEvidence(finding), [finding]);
@@ -120,6 +120,7 @@ export function VerificationRail({ finding, bulletin = null }: Props) {
 
   return (
     <section className={`verification-rail ${fullscreen ? "verification-fullscreen" : ""}`} aria-labelledby="verification-title">
+      <div className="verification-controls">
       <div className="verification-head verification-head-compact">
         <div>
           <p className="verification-kicker">Evidence engineering</p>
@@ -208,7 +209,15 @@ export function VerificationRail({ finding, bulletin = null }: Props) {
               )}
             </section>
           )}
-          <div className="verification-frame-wrap">
+        </>
+      ) : (
+        <div className="verification-assist-wrap">
+          <RemediationAssist finding={finding} />
+        </div>
+      )}
+      </div>
+      {hasTerminalPath && (
+          <div className="verification-frame-wrap verification-frame-wide">
             <iframe
               ref={frameRef}
               className="verification-frame"
@@ -218,11 +227,6 @@ export function VerificationRail({ finding, bulletin = null }: Props) {
               referrerPolicy="no-referrer"
             />
           </div>
-        </>
-      ) : (
-        <div className="verification-frame-wrap verification-assist-wrap">
-          <RemediationAssist finding={finding} />
-        </div>
       )}
     </section>
   );

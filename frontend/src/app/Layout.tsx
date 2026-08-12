@@ -331,7 +331,7 @@ export function Layout({
           </div>
         </section>
 
-        <section className={`panel ${pane !== "issue" ? "hidden-mobile" : ""}`}>
+        <section className={`panel issue-panel-shell ${pane !== "issue" ? "hidden-mobile" : ""}`}>
           <div className="panel-head">
             <h2>Issue</h2>
             <div className="meta">{selectedResolved?.cve_id ?? "select one"}</div>
@@ -341,7 +341,7 @@ export function Layout({
           </div>
         </section>
 
-        <section className={`panel ${pane !== "flow" ? "hidden-mobile" : ""}`}>
+        <section className={`panel evidence-panel-shell ${pane !== "flow" ? "hidden-mobile" : ""}`}>
           <div className="panel-head">
             <h2>Evidence</h2>
             <div className="panel-head-actions">
