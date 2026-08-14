@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="627" viewBox="0 0 1200 627" role="img" aria-labelledby="title desc">
+  <title id="title">IBM i Vulnerability Curator</title>
+  <desc id="desc">A portfolio prototype that turns IBM security bulletins into prioritized remediation and verification evidence.</desc>
+  <rect width="1200" height="627" fill="#000"/>
+  <rect x="36" y="36" width="1128" height="555" rx="18" fill="#070707" stroke="#6fd99a" stroke-opacity=".38"/>
+  <path d="M36 112H1164" stroke="#6fd99a" stroke-opacity=".22"/>
+
+  <g font-family="IBM Plex Sans, Arial, sans-serif">
+    <text x="72" y="82" fill="#ececec" font-size="25" font-weight="600">IBM i Vulnerability Curator</text>
+    <text x="1128" y="82" text-anchor="end" fill="#6fd99a" font-size="17" font-weight="600">i on GRC</text>
+
+    <text x="72" y="178" fill="#ececec" font-size="46" font-weight="600" letter-spacing="-1">From IBM bulletin</text>
+    <text x="72" y="232" fill="#ececec" font-size="46" font-weight="600" letter-spacing="-1">to defensible evidence.</text>
+    <text x="72" y="278" fill="#9a9a9a" font-size="20">Prioritize vulnerabilities. Decide the treatment.</text>
+    <text x="72" y="307" fill="#9a9a9a" font-size="20">Verify the selected PTF through commands or SQL Services.</text>
+
+    <g transform="translate(72 365)">
+      <rect width="194" height="72" rx="9" fill="#0e0e0e" stroke="#6fd99a" stroke-opacity=".28"/>
+      <text x="18" y="28" fill="#6fd99a" font-size="14" font-weight="600" letter-spacing="1.4">01 · PRIORITIZE</text>
+      <text x="18" y="53" fill="#ececec" font-size="16">IBM PSIRT scope</text>
+    </g>
+    <path d="M278 401H302" stroke="#d4a045" stroke-width="2"/>
+    <g transform="translate(314 365)">
+      <rect width="194" height="72" rx="9" fill="#0e0e0e" stroke="#6fd99a" stroke-opacity=".28"/>
+      <text x="18" y="28" fill="#6fd99a" font-size="14" font-weight="600" letter-spacing="1.4">02 · DECIDE</text>
+      <text x="18" y="53" fill="#ececec" font-size="16">Act · Resolve · Interim</text>
+    </g>
+    <path d="M520 401H544" stroke="#d4a045" stroke-width="2"/>
+    <g transform="translate(556 365)">
+      <rect width="194" height="72" rx="9" fill="#0e0e0e" stroke="#6fd99a" stroke-opacity=".28"/>
+      <text x="18" y="28" fill="#6fd99a" font-size="14" font-weight="600" letter-spacing="1.4">03 · VERIFY</text>
+      <text x="18" y="53" fill="#ececec" font-size="16">DSPPTF · SQL evidence</text>
+    </g>
+
+    <text x="72" y="527" fill="#d4a045" font-size="15" font-weight="600" letter-spacing="1.8">WORKING PORTFOLIO PROTOTYPE</text>
+    <text x="72" y="554" fill="#747474" font-size="14">Authoritative public data · Explicit simulation boundaries · No live partition access</text>
+  </g>
+
+  <g transform="translate(792 150)" font-family="IBM Plex Mono, Consolas, monospace">
+    <rect width="316" height="324" rx="12" fill="#020804" stroke="#6fd99a" stroke-opacity=".65"/>
+    <rect x="18" y="18" width="280" height="31" rx="5" fill="#0d1b12"/>
+    <circle cx="34" cy="33.5" r="4" fill="#6fd99a"/>
+    <text x="48" y="38" fill="#9a9a9a" font-size="11">IBM i verification</text>
+    <text x="158" y="86" text-anchor="middle" fill="#6fd99a" font-size="14">Display PTF</text>
+    <text x="30" y="122" fill="#8fcfaa" font-size="12">Licensed program . . . 5770SS1</text>
+    <text x="30" y="148" fill="#8fcfaa" font-size="12">PTF identifier . . . . SJ10979</text>
+    <text x="30" y="174" fill="#8fcfaa" font-size="12">Release . . . . . . . V7R4M0</text>
+    <path d="M30 201H286" stroke="#6fd99a" stroke-opacity=".25"/>
+    <text x="30" y="229" fill="#d4a045" font-size="11">QSYS2.PTF_INFO</text>
+    <text x="30" y="253" fill="#8fcfaa" font-size="10">WHERE PTF_IDENTIFIER = 'SJ10979'</text>
+    <text x="30" y="277" fill="#8fcfaa" font-size="10">AND PRODUCT_ID = '5770SS1'</text>
+    <text x="30" y="305" fill="#6fd99a" font-size="11">F3=Exit   F12=Cancel</text>
+  </g>
+</svg>
