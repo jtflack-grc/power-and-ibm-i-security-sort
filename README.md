@@ -1,10 +1,12 @@
 # IBM i Vulnerability Curator
 
-A portfolio artifact that **translates public vulnerability intelligence into IBM i remediation and verification work**.
+A portfolio artifact that **correlates IBM's release-applicable CVEs and bulletin remedies with observed IBM i fix state**.
 
-The curator is intentionally IBM i-only. It preserves explainable prioritization and
-Apply / Contain / Monitor routing, then introduces a source-validated 5250 verification
-rail for findings with an applicable PTF path.
+The curator is intentionally IBM i-only. IBM's `SYSTOOLS.CVE_INFO()` establishes which
+published CVEs affect a 7.5 or 7.6 release, but does not report whether each correcting
+PTF is applied. The curator closes that gap: it resolves IBM bulletin remedies, compares
+them with browser-local `QSYS2.PTF_INFO` / `QSYS2.GROUP_PTF_INFO` exports, and preserves
+the result as reviewable remediation evidence.
 
 It live-pulls public intel, sorts with explainable **counter-levers** (so CVSS alone cannot drown the queue), then docks each finding into **Apply / Contain / Monitor** with Resolve (PTF / APAR / Fix Central) vs Interim controls.
 
@@ -18,9 +20,9 @@ Front door: [jtflack-grc.github.io/portfolio](https://jtflack-grc.github.io/port
 | Priority buckets | Work docks: Apply · Contain · Monitor |
 | “Why does this matter?” levers | Resolve: bulletin / PTF / APAR / Fix Central / verify-on-box |
 | Threat tempering | Interim: authority, exposure, TLS, PSP currency |
-| Vendor remedy | Synthetic 5250 verification using validated PTF screen fixtures |
+| IBM bulletin remedy | Observed SQL fix state and explicit indeterminate outcomes |
 
-**This is not a scanner replacement.** It is a curator that sits between risk language and change work.
+**This is not a scanner replacement.** It is the correlation and evidence layer between IBM's CVE claim, local fix state, and change work.
 
 ## What it does
 
@@ -29,9 +31,9 @@ Front door: [jtflack-grc.github.io/portfolio](https://jtflack-grc.github.io/port
 3. Distinguishes IBM i-native from supply-chain / TPRM surface
 4. Builds Resolve + Interim cards (including Fix Central / support search when scrape is thin)
 5. Groups remediation work by IBM bulletin while retaining individual CVE scoring
-6. Compares IBM's expected PTF/group remedy with a bounded, browser-local inventory export
+6. Provides an ACS-ready SQL collection kit and compares IBM's expected PTF/group remedy with a bounded, browser-local inventory export
 7. Produces a Markdown evidence packet with optional owner, dates, disposition, reviewer, and observed-inventory status
-8. UI: **Findings · Issue · Actions + 5250 verification**
+8. UI: **Findings · Issue · Evidence**, with the green-screen method closed as a legacy fallback
 
 ## Why PSIRT-first changed the result
 
@@ -43,17 +45,33 @@ IBM's `SYSTOOLS.CVE_INFO` service. The current guarded snapshot contains 161
 PSIRT-confirmed CVEs across 49 processed bulletin bodies. NVD can enrich those
 records, but it cannot add findings to the published queue.
 
+## Evidence model
+
+| Claim | Authority | Curator treatment |
+|-------|-----------|-------------------|
+| A CVE affects an IBM i release | IBM PSIRT / `SYSTOOLS.CVE_INFO()` | Admit and preserve the IBM support reference |
+| A bulletin identifies a remedy | IBM Security Bulletin | Extract product, release, PTF, Group PTF, and APAR without inventing missing relationships |
+| A fix exists on this partition | `QSYS2.PTF_INFO` / `QSYS2.GROUP_PTF_INFO` export | Parse locally and compare with the expected remedy |
+| A group is current | `SYSTOOLS.GROUP_PTF_CURRENCY` | Preserve current, update-available, or PSP-unavailable state |
+| Remediation is complete | Human-reviewed case record | Require disposition, ownership, change reference, and reviewer evidence |
+
+The downloadable [`ibmi-cve-fix-evidence.sql`](frontend/public/ibmi-cve-fix-evidence.sql)
+is the canonical collection path. It captures system context, `CVE_INFO`, individual
+PTFs, Group PTFs, live group currency, and operational exceptions such as loaded fixes
+or pending IPL action. IBM i 7.4 skips `CVE_INFO`; the curator's guarded PSIRT snapshot
+provides the release-level CVE set while local QSYS2 views still provide observed state.
+
 ## Panels
 
 | Panel | Purpose |
 |-------|---------|
 | Findings | Bulletin-first queue with expandable CVEs; release, product, remedy, priority, action, and snapshot-change filters |
 | Issue | **Resolve** / **Interim**, local decision fields, and downloadable Markdown packet |
-| Actions | Transport-free IronTerm verification plus local PTF/group inventory comparison |
+| Evidence | SQL-first CVE-to-fix comparison and case evidence; legacy command/5250 aid closed by default |
 
-## 5250 scenario mode
+## Legacy 5250 scenario mode
 
-The Pages application does not connect to an IBM i, accept credentials, or run
+The legacy accordion is retained for shops where SQL collection is unavailable. The Pages application does not connect to an IBM i, accept credentials, or run
 websockify. It vendors the TN5250 implementation from
 [bencz/IronTerm](https://github.com/bencz/IronTerm) at a pinned commit and replaces
 the live WebSocket/Telnet lifecycle with a deterministic scenario boundary.
@@ -137,14 +155,14 @@ Static hosting: serve `frontend/dist` (sample JSON included). Live feeds need a 
 2. Open a finding — counter-levers explain the sort.
 3. Resolve → bulletin / Fix Central; Interim → privileged-profile hygiene.
 4. Optional: guided routing / shop persona (answers stay in-browser); paste PSP tokens if you have them.
-5. Optionally compare a sanitized `QSYS2.PTF_INFO` / `QSYS2.GROUP_PTF_INFO` export.
+5. Run the supplied ACS SQL kit and compare a sanitized `QSYS2.PTF_INFO` / `QSYS2.GROUP_PTF_INFO` export.
 6. Complete local owner/change/disposition fields and download the Markdown evidence packet.
 
-Story in one line: GRC language (CVSS / OWASP access-control) becomes IBM i systems work (bulletin → PTF decision → 5250 verification → closure evidence).
+Story in one line: IBM identifies the CVEs; the curator turns IBM's bulletin remedy and local SQL state into a reviewable remediation decision.
 
 ## Portfolio card copy
 
-**IBM i Vulnerability Curator** — Converts IBM PSIRT disclosures into release-aware remediation and verification work. It groups related CVEs by bulletin, preserves PTF/group/APAR applicability, explains risk ordering, compares optional browser-local PTF inventory, and produces an evidence-ready Markdown packet. A source-gated IronTerm rail demonstrates authentic DSPPTF verification without credentials, transport, or a live partition. Static Pages deployment; not a scanner of record.
+**IBM i Vulnerability Curator** — Joins IBM's release-applicable CVEs and bulletin remedies to observed IBM i PTF state. It supplies an ACS SQL evidence kit, compares sanitized browser-local PTF and Group PTF exports, explains every priority and applicability decision, and produces an evidence-ready Markdown packet. A closed legacy accordion retains DSPPTF guidance for constrained shops. Static Pages deployment; not a scanner of record.
 
 ## Static Pages deploy (scheduled live snapshot)
 
@@ -182,7 +200,9 @@ IBM Plex + OLED black grounds. Green and amber stay on strokes and accents only 
 
 - Inventory comparison trusts locally supplied exports and is not scanner-grade discovery.
 - Supersedence, prerequisites/co-requisites, IPL action, delayed application, and cover-letter warnings are shown only when a reliable IBM source can support them; the curator does not infer them.
-- `DSPPTF` is the only interactive screen currently released. `WRKPTFGRP` and additional-detail screens remain command coaching until exact source coordinates and behavior are available.
+- SQL exports are user-supplied observations, not authenticated scanner results; the curator cannot attest that an export is complete or untampered.
+- `CVE_INFO()` is available only on IBM i 7.5 and 7.6 at IBM's required PTF levels and depends on network access to IBM. IBM i 7.4 uses the curator's guarded PSIRT snapshot for CVE scope.
+- `DSPPTF` remains a legacy demonstration. `WRKPTFGRP` and additional-detail screens remain command coaching rather than the primary evidence path.
 - Ranking has an automated engineering calibration set, not an independent expert-reviewed benchmark.
 - No organizational workflow data is sent or synchronized; local fields disappear with the browser session.
 - The rolling 400-day queue is operational curation, not a historical vulnerability archive.
