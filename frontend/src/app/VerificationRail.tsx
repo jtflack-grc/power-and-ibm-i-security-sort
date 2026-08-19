@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Bulletin, Finding } from "../types";
 import { extractPtfEvidence } from "../ptfEvidence";
 import { RemediationAssist } from "./RemediationAssist";
+import { InventoryComparison } from "./InventoryComparison";
 import { PtfCommandCoach } from "./PtfCommandCoach";
 
 interface Props {
@@ -20,6 +21,7 @@ export function VerificationRail({ finding, bulletin = null }: Props) {
   const [showSql, setShowSql] = useState(false);
   const [copiedSql, setCopiedSql] = useState<"group" | "ptf" | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
+  const [showLegacy, setShowLegacy] = useState(false);
   const applicableRows = useMemo(
     () => (bulletin?.applicability ?? []).filter((row) =>
       row.product_id && row.release_system && (row.individual_ptfs.length || row.group_ptfs.length)
@@ -82,7 +84,7 @@ export function VerificationRail({ finding, bulletin = null }: Props) {
 
   useEffect(() => {
     const load = () => {
-      if (!hasTerminalPath) return;
+      if (!hasTerminalPath || (!showLegacy && !fullscreen)) return;
       frameRef.current?.contentWindow?.postMessage({
         type: "ironterm:load",
         scenario: terminalScenario,
@@ -103,7 +105,7 @@ export function VerificationRail({ finding, bulletin = null }: Props) {
     window.addEventListener("message", receive);
     load();
     return () => window.removeEventListener("message", receive);
-  }, [finding?.cve_id, hasTerminalPath, terminalScenario, ptfs, groups, scenarioMeta]);
+  }, [finding?.cve_id, hasTerminalPath, terminalScenario, ptfs, groups, scenarioMeta, showLegacy, fullscreen]);
 
   useEffect(() => {
     if (!fullscreen) return;
@@ -118,7 +120,7 @@ export function VerificationRail({ finding, bulletin = null }: Props) {
     window.setTimeout(() => setCopiedSql((current) => current === kind ? null : current), 1400);
   };
 
-  const terminalFrame = hasTerminalPath ? (
+  const terminalFrame = hasTerminalPath && (showLegacy || fullscreen) ? (
     <div className="verification-frame-wrap verification-frame-wide">
       <iframe
         ref={frameRef}
@@ -136,8 +138,8 @@ export function VerificationRail({ finding, bulletin = null }: Props) {
       <div className="verification-controls">
       <div className="verification-head verification-head-compact">
         <div>
-          <p className="verification-kicker">Evidence engineering</p>
-          <h3 id="verification-title">Collect SQL, then verify on IBM i</h3>
+          <p className="verification-kicker">CVE-to-fix evidence</p>
+          <h3 id="verification-title">IBM claim × local system state</h3>
         </div>
         <div className="verification-head-actions">
           <button
@@ -148,9 +150,7 @@ export function VerificationRail({ finding, bulletin = null }: Props) {
           >
             Sources &amp; boundary
           </button>
-          <button type="button" className="verification-source-button" aria-pressed={fullscreen} onClick={() => setFullscreen((value) => !value)}>
-            {fullscreen ? "Exit full screen" : "Full screen"}
-          </button>
+          <span className="verification-state">{hasTerminalPath ? "SQL comparison ready" : "Remediation route"}</span>
         </div>
       </div>
       {showSources && (
@@ -164,9 +164,9 @@ export function VerificationRail({ finding, bulletin = null }: Props) {
           >
             {terminalScenario === "wrkptfgrp" ? "IBM WRKPTFGRP examples ↗" : "IBM Display PTF Status example ↗"}
           </a>
-          <span>IronTerm TN5250 · GPL-3.0 · transport and credentials disabled</span>
-          <span>Fixture levels use IBM's public 7.4 group table; system statuses are synthetic.</span>
-          <span>Individual-PTF option 5 opens a bounded General Information fixture; group details and alternate pages remain gated.</span>
+          <a href="https://www.ibm.com/docs/en/i/7.6.0?topic=services-cve-info-table-function" target="_blank" rel="noreferrer">IBM CVE_INFO documentation ↗</a>
+          <span>SQL exports and case fields remain browser-local; no partition connection or upload.</span>
+          <span>IronTerm TN5250 is a legacy aid; fixture system statuses are synthetic.</span>
         </div>
       )}
       {applicableRows.length > 1 && (
@@ -182,15 +182,9 @@ export function VerificationRail({ finding, bulletin = null }: Props) {
           </select>
         </label>
       )}
-      <PtfCommandCoach finding={finding} evidenceOverride={scenarioMeta} />
+      {!fullscreen && <InventoryComparison bulletin={bulletin} />}
       {hasTerminalPath ? (
         <>
-          {hasPtfPath && hasGroupPath && (
-            <div className="verification-scenario-tabs" aria-label="PTF display">
-              <button type="button" aria-pressed={terminalScenario === "dspptf-status"} onClick={() => setTerminalScenario("dspptf-status")}>Individual PTF</button>
-              <button type="button" aria-pressed={terminalScenario === "wrkptfgrp"} onClick={() => setTerminalScenario("wrkptfgrp")}>PTF groups</button>
-            </div>
-          )}
           {!fullscreen && (
             <section className="sql-evidence-route" aria-label="SQL evidence engineering route">
               <div className="sql-evidence-actions">
@@ -215,7 +209,7 @@ export function VerificationRail({ finding, bulletin = null }: Props) {
                       <pre><code>{ptfSql}</code></pre>
                     </article>
                   </div>
-                  <p className="sql-evidence-note">Run in ACS or an approved Db2 for i client; retain timestamp and partition identity.</p>
+                  <p className="sql-evidence-note">Focused queries use the selected bulletin remedy. Run in ACS or an approved Db2 for i client; retain timestamp and partition identity.</p>
                   <a href="https://www.ibm.com/docs/en/i/7.4.0?topic=services-group-ptf-info-view" target="_blank" rel="noreferrer">IBM GROUP_PTF_INFO reference ↗</a>
                   <a href="https://www.ibm.com/docs/en/i/7.4.0?topic=services-ptf-info-view" target="_blank" rel="noreferrer">IBM PTF_INFO reference ↗</a>
                 </div>
@@ -229,7 +223,21 @@ export function VerificationRail({ finding, bulletin = null }: Props) {
         </div>
       )}
       </div>
-      {terminalFrame}
+      <details className="legacy-verification" open={fullscreen || showLegacy} onToggle={(event) => setShowLegacy(event.currentTarget.open)}>
+        <summary>Legacy collection method · DSPPTF / WRKPTFGRP</summary>
+        <p>Use this route only when SQL collection is unavailable. The deterministic screen demonstrates command navigation; it does not connect to a partition or prove local status.</p>
+        <PtfCommandCoach finding={finding} evidenceOverride={scenarioMeta} />
+        {hasPtfPath && hasGroupPath && (
+          <div className="verification-scenario-tabs" aria-label="PTF display">
+            <button type="button" aria-pressed={terminalScenario === "dspptf-status"} onClick={() => setTerminalScenario("dspptf-status")}>Individual PTF</button>
+            <button type="button" aria-pressed={terminalScenario === "wrkptfgrp"} onClick={() => setTerminalScenario("wrkptfgrp")}>PTF groups</button>
+          </div>
+        )}
+        {hasTerminalPath && <button type="button" className="verification-source-button" aria-pressed={fullscreen} onClick={() => setFullscreen((value) => !value)}>
+          {fullscreen ? "Exit full screen" : "Open terminal full screen"}
+        </button>}
+        {terminalFrame || <p className="callout-muted">No source-associated PTF or Group PTF is available for a legacy scenario.</p>}
+      </details>
     </section>
   );
 }
