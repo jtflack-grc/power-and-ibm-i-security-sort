@@ -23,9 +23,21 @@ export function InventoryComparison({ bulletin }: Props) {
   };
 
   return (
-    <details className="inventory-comparison">
-      <summary>Local PTF inventory comparison</summary>
-      <p>Paste or load sanitized output from <code>QSYS2.PTF_INFO</code> or <code>QSYS2.GROUP_PTF_INFO</code>. Processing stays in this browser tab; files are never uploaded.</p>
+    <section className="inventory-comparison" aria-labelledby="sql-evidence-title">
+      <div className="sql-evidence-head">
+        <div>
+          <p className="verification-kicker">Primary collection path</p>
+          <h4 id="sql-evidence-title">Correlate IBM CVEs with observed fix state</h4>
+        </div>
+        <a className="button button-primary" href="./ibmi-cve-fix-evidence.sql" download>Download ACS SQL kit</a>
+      </div>
+      <ol className="sql-evidence-flow">
+        <li><strong>Applicable</strong><span><code>SYSTOOLS.CVE_INFO()</code> supplies IBM&apos;s release-filtered CVE set on 7.5/7.6.</span></li>
+        <li><strong>Expected</strong><span>The curator resolves each IBM bulletin to PTF, Group PTF, APAR, and release evidence.</span></li>
+        <li><strong>Observed</strong><span><code>QSYS2.PTF_INFO</code> and <code>QSYS2.GROUP_PTF_INFO</code> report local state.</span></li>
+        <li><strong>Decision</strong><span>The comparison and case packet preserve what is known, missing, or indeterminate.</span></li>
+      </ol>
+      <p>Run the kit in ACS, export the individual-PTF or Group PTF result as CSV, then paste or load the sanitized output here. Processing stays in this browser tab; files are never uploaded.</p>
       <label className="verification-applicability inventory-release">Partition release
         <select value={targetRelease} onChange={(event) => setTargetRelease(event.target.value)}>
           <option value="">Not selected</option>{["7.2", "7.3", "7.4", "7.5", "7.6"].map((value) => <option key={value} value={value}>IBM i {value}</option>)}
@@ -52,7 +64,11 @@ export function InventoryComparison({ bulletin }: Props) {
         </div>)}
       </div>}
       {bulletin && comparison.length === 0 && <p>No source-associated PTF identifiers are available for comparison in this bulletin.</p>}
-      <p className="callout-muted">An observed token is evidence supplied by the user, not proof that the remedy applies to this release or that application completed successfully.</p>
-    </details>
+      <p className="callout-muted">An observed token is user-supplied evidence. Applicability still comes from IBM&apos;s bulletin, and loaded or pending-IPL status is not equivalent to completed remediation.</p>
+      <details className="sql-boundary">
+        <summary>Compatibility and evidence boundary</summary>
+        <p><code>CVE_INFO()</code> is currently available on IBM i 7.5 and 7.6 at IBM&apos;s required PTF levels and requires access to IBM&apos;s bulletin service. IBM i 7.4 collection therefore uses the curator&apos;s PSIRT snapshot plus the local QSYS2 exports. A failed external lookup remains indeterminate.</p>
+      </details>
+    </section>
   );
 }

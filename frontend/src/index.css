@@ -2182,12 +2182,129 @@ iframe:focus-visible {
   line-height: 1.5;
 }
 
+.inventory-comparison {
+  margin: 0 0.9rem 0.85rem;
+  padding: 0.85rem;
+  border: 1px solid #284238;
+  background: #08100c;
+}
+
+.sql-evidence-head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.sql-evidence-head h4 {
+  margin: 0.2rem 0 0;
+  color: var(--white);
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.sql-evidence-flow {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+  padding: 0;
+  margin: 0.8rem 0;
+  list-style: none;
+}
+
+.sql-evidence-flow li {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.6rem;
+  border: 1px solid var(--line);
+  background: #050706;
+}
+
+.sql-evidence-flow strong {
+  color: var(--green);
+  font: 0.68rem "IBM Plex Mono", monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.sql-evidence-flow span,
+.inventory-comparison > p,
+.sql-boundary p,
+.legacy-verification > p {
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.5;
+}
+
+.inventory-comparison textarea {
+  box-sizing: border-box;
+  width: 100%;
+  resize: vertical;
+  border: 1px solid var(--line);
+  background: #020403;
+  color: var(--white);
+  padding: 0.55rem;
+  font: 0.72rem/1.45 "IBM Plex Mono", monospace;
+}
+
+.inventory-file input { display: none; }
+
+.inventory-results {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0.65rem 0;
+}
+
+.inventory-result {
+  display: grid;
+  grid-template-columns: 0.7fr 1.2fr 1.4fr;
+  gap: 0.5rem;
+  padding: 0.45rem 0.55rem;
+  border-left: 2px solid var(--amber);
+  background: #050706;
+  color: var(--muted);
+  font: 0.68rem/1.4 "IBM Plex Mono", monospace;
+}
+
+.inventory-result.observed { border-left-color: var(--green); }
+.inventory-result strong { color: var(--white); }
+
+.sql-boundary,
+.legacy-verification {
+  border-top: 1px solid var(--line);
+  margin-top: 0.75rem;
+  padding-top: 0.65rem;
+}
+
+.sql-boundary summary,
+.legacy-verification summary {
+  color: var(--muted);
+  cursor: pointer;
+  font: 0.7rem "IBM Plex Mono", monospace;
+}
+
+.legacy-verification {
+  margin: 0 0.9rem 0.9rem;
+  padding: 0.75rem;
+  border: 1px solid var(--line);
+  background: #020403;
+}
+
+.legacy-verification[open] summary { color: var(--amber); }
+.legacy-verification .verification-frame-wrap { margin: 0.75rem 0 0; }
+
 .verification-applicability {
   display: grid;
   gap: 0.35rem;
   margin: 0 0.9rem 0.75rem;
   color: var(--muted);
   font: 0.68rem "IBM Plex Mono", monospace;
+}
+
+@media (max-width: 760px) {
+  .sql-evidence-head { flex-direction: column; }
+  .sql-evidence-flow { grid-template-columns: 1fr; }
+  .inventory-result { grid-template-columns: 1fr; }
 }
 
 .verification-applicability select {

@@ -127,9 +127,9 @@ export function Layout({
           rel="noreferrer"
         >
           <div className="brand-wordmark">
-            <span>IBM i Vuln Curator</span>
+            <span>IBM i Fix Curator</span>
           </div>
-          <div className="brand-sub">IBM i Vulnerability Curator · i on GRC</div>
+          <div className="brand-sub">CVE-to-fix evidence · i on GRC</div>
         </a>
         <div className="header-actions">
           <button
@@ -345,7 +345,7 @@ export function Layout({
           <div className="panel-head">
             <h2>Evidence</h2>
             <div className="panel-head-actions">
-              <span className="meta">IBM i command path</span>
+              <span className="meta">IBM claim × local state</span>
               {result && (
                 <button
                   type="button"
@@ -376,8 +376,7 @@ export function Layout({
 
       <footer className="site-footer">
         <span>
-          No keys · published feeds on Pages · local live when API is up · route in-browser · not a
-          scanner
+          IBM PSIRT scope · local SQL evidence · no uploads · transparent comparison · not a scanner
         </span>
         <a href="https://jtflack-grc.github.io/portfolio/" target="_blank" rel="noreferrer">
           Portfolio front door ↗

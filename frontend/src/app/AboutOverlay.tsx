@@ -73,11 +73,11 @@ export function AboutOverlay({ mode, onClose, onReplayIntro }: Props) {
         {isIntro ? (
           <>
             <p className="about-kicker">Before the queue</p>
-            <h1 id="about-title">Turn IBM i security bulletins into system work</h1>
+            <h1 id="about-title">Turn IBM&apos;s CVE list into fix evidence</h1>
             <p className="welcome-lead">
-              IBM publishes the affected product and remedy. This curator organizes those current
-              IBM i bulletins into an explainable <strong>Apply / Contain / Monitor</strong> queue,
-              then carries the operator from risk signal to PTF or APAR evidence and verification.
+              IBM&apos;s <code>SYSTOOLS.CVE_INFO()</code> identifies CVEs affecting a release, but it does
+              not prove that the correcting fix is applied. This curator resolves IBM&apos;s bulletins,
+              compares the expected remedy with local SQL evidence, and preserves the decision.
             </p>
 
             <div className="welcome-source-line">
@@ -99,8 +99,8 @@ export function AboutOverlay({ mode, onClose, onReplayIntro }: Props) {
               </section>
               <section>
                 <span className="welcome-rail-number">03</span>
-                <h2>LCL evidence check</h2>
-                <p>Use command coaching and source-validated 5250 screens to verify resolved PTF evidence.</p>
+                <h2>Fix evidence</h2>
+                <p>Compare the IBM remedy with QSYS2 PTF state; use the legacy 5250 path only when SQL is unavailable.</p>
               </section>
             </div>
 
@@ -109,7 +109,7 @@ export function AboutOverlay({ mode, onClose, onReplayIntro }: Props) {
               <ol>
                 <li>Select a recent finding in the left rail.</li>
                 <li>Review its ranking levers and IBM remediation path.</li>
-                <li>Use the evidence rail when a validated PTF scenario is available.</li>
+                <li>Run the ACS SQL kit and compare sanitized local fix state.</li>
               </ol>
             </div>
             <p className="welcome-honesty">
@@ -128,13 +128,12 @@ export function AboutOverlay({ mode, onClose, onReplayIntro }: Props) {
             <h1 id="about-title">IBM i Vulnerability Curator</h1>
             <p className="welcome-lead">
               Built by <strong>John Flack</strong> (jtflack-grc) as a portfolio artifact that
-              translates GRC / vulnerability-management language into IBM i systems work and
-              verification evidence.
+                joins IBM&apos;s CVE claims to transparent IBM i fix-state evidence.
             </p>
             <ul className="welcome-method">
               <li>
                 <strong>What it is</strong> A curator between risk language and change work — KEV,
-                NVD, EPSS, OWASP context, IBM bulletin hints → Apply / Contain / Monitor
+                NVD, EPSS, OWASP context, IBM bulletin remedies, and local SQL state → Apply / Contain / Monitor
               </li>
               <li>
                 <strong>Platform scope</strong> IBM i only, including operating-system and
