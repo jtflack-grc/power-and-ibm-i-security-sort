@@ -4,7 +4,7 @@
 
 - PSIRT remains the admission authority.
 - A PTF is not represented as release-applicable without source-supported structure.
-- Synthetic 5250 output is not represented as production evidence.
+- Synthetic 5250 output is not represented as production evidence and is closed as a legacy fallback by default.
 - Credentials, private inventory, and shop context do not leave the browser.
 
 | Threat | Control | Residual limitation |
