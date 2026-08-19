@@ -23,7 +23,9 @@ flowchart TD
 
 ## Trust boundaries
 
-The scheduled workflow fetches public HTTPS sources. The browser receives sanitized static JSON and fixed terminal fixtures. Shop context, decision fields, imported inventory tokens, comparisons, and generated packets remain local. Pages has no backend, credentials, arbitrary terminal transport, or IBM i connection.
+The scheduled workflow fetches public HTTPS sources. On IBM i 7.5/7.6, the supplied ACS kit can independently collect IBM's release-filtered `SYSTOOLS.CVE_INFO()` result. The browser receives sanitized static JSON and optional fixed terminal fixtures. Shop context, decision fields, imported SQL inventory tokens, comparisons, and generated packets remain local. Pages has no backend, credentials, arbitrary terminal transport, or IBM i connection.
+
+The primary correlation is deliberately asymmetric: IBM PSIRT and the bulletin assert applicability and expected remedy; QSYS2 exports assert only observed local state. The browser joins those claims but does not promote `LOADED`, pending-IPL, missing, or PSP-unavailable results into proof of remediation.
 
 ## Failure behavior
 
