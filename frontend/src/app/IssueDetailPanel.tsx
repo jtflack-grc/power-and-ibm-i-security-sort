@@ -1,3 +1,5 @@
+import { ContextAssessmentPanel } from "./ContextAssessmentPanel";
+import type { Assessment } from "../contextAssessment";
 import { CvssScore } from "./CvssScore";
 import { useEffect, useState } from "react";
 import type { Bulletin, Finding } from "../types";
@@ -13,6 +15,9 @@ import { CaseWorkflowPanel } from "./CaseWorkflowPanel";
 
 interface Props {
   finding: Finding | null;
+  contextMode: string;
+  contextRecords: Assessment[];
+  onSaveContext: (record: Assessment) => boolean;
   shop?: ShopContext | null;
   bulletin?: Bulletin | null;
   generatedAt?: string | null;
@@ -26,7 +31,7 @@ function cleanSentence(value: string | undefined, fallback: string): string {
   return text.length > 220 ? `${text.slice(0, 217).trim()}…` : text;
 }
 
-export function IssueDetailPanel({ finding, shop, bulletin, generatedAt }: Props) {
+export function IssueDetailPanel({ finding, shop, bulletin, generatedAt, contextMode, contextRecords, onSaveContext }: Props) {
   const [openSections, setOpenSections] = useState<Set<IssueSection>>(() => new Set());
   const [copied, setCopied] = useState(false);
   const [workflow, setWorkflow] = useState<CaseWorkflow>(() => finding ? loadCaseWorkflow(finding.cve_id) : loadCaseWorkflow("none"));
@@ -138,6 +143,8 @@ export function IssueDetailPanel({ finding, shop, bulletin, generatedAt }: Props
       </div>
 
       {finding.cvss_vector && <details className="cvss-vector"><summary>CVSS vector</summary><code>{finding.cvss_vector}</code></details>}
+
+      <ContextAssessmentPanel key={`${contextMode}:${finding.cve_id}`} finding={finding} mode={contextMode} records={contextRecords} onSave={onSaveContext} />
 
       <section className="decision-glance" aria-label="Decision at a glance">
         <h3>Decision at a glance</h3>

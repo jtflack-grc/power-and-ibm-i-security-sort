@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Finding, ProgressEvent, TriageResult } from "../types";
+import { assess, readStore, STORAGE_KEY, storeKey } from "../contextAssessment";
+import type { Assessment, AssessmentStore } from "../contextAssessment";
 import { cvssValue } from "../cvss";
 import { FLAGSHIP_CVE, FlagshipWalkthrough } from "./FlagshipWalkthrough";
 import type { ActionLane } from "./ActionLanesFlow";
@@ -68,6 +70,18 @@ export function Layout({
   liveError = null,
   onClearError,
 }: Props) {
+  const [assessmentClock, setAssessmentClock] = useState(Date.now());
+  useEffect(() => { const timer = window.setInterval(() => setAssessmentClock(Date.now()), 60_000); return () => window.clearInterval(timer); }, []);
+  const [contextStore, setContextStore] = useState<AssessmentStore>(() => {
+    try { return readStore(localStorage.getItem(STORAGE_KEY)); } catch { return {}; }
+  });
+  const saveContext = (record: Assessment): boolean => {
+    const key = storeKey(record.mode, record.cveId);
+    const entries = contextStore[key] || [];
+    const next = { ...contextStore, [key]: [record, ...entries.filter(item => item.id !== record.id)].slice(0, 30) };
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); setContextStore(next); return true; }
+    catch { setContextStore(next); return false; }
+  };
   const [pane, setPane] = useState<Pane>("findings");
   const [selected, setSelected] = useState<Finding | null>(null);
   const [laneFilter, setLaneFilter] = useState<ActionLane | "all">("all");
@@ -75,6 +89,13 @@ export function Layout({
   const [showFeedSources, setShowFeedSources] = useState(false);
 
   const findings = useMemo(() => result?.findings ?? [], [result?.findings]);
+  const contextMode = result?.mode || "unknown";
+  const contextLabels = useMemo(() => Object.fromEntries(findings.map(finding => {
+    const record = contextStore[storeKey(contextMode, finding.cve_id)]?.[0];
+    if (!record) return [finding.cve_id, "IBM i context · Not assessed"];
+    const assessment = assess(record, finding, assessmentClock);
+    return [finding.cve_id, assessment.range ? `IBM i ${assessment.range.low.toFixed(1)}–${assessment.range.high.toFixed(1)} · ${record.asset}` : `IBM i context · ${assessment.disposition}`];
+  })), [findings, contextStore, contextMode, assessmentClock]);
   const publishedStamp = formatStamp(result?.generated_at);
   const modeLabel =
     result?.mode === "live"
@@ -321,6 +342,7 @@ export function Layout({
                 onLaneFilter={setLaneFilter}
                 onSelect={openFinding}
                 pasteHitIds={[]}
+                contextLabels={contextLabels}
               />
             )}
             {result?.mode === "sample" && (
@@ -340,7 +362,7 @@ export function Layout({
             <div className="meta">{selectedResolved?.cve_id ?? "select one"}</div>
           </div>
           <div className="panel-body">
-            <IssueDetailPanel finding={selectedResolved} bulletin={selectedBulletin} generatedAt={result?.generated_at} />
+            <IssueDetailPanel finding={selectedResolved} bulletin={selectedBulletin} generatedAt={result?.generated_at} contextMode={contextMode} contextRecords={selectedResolved ? contextStore[storeKey(contextMode, selectedResolved.cve_id)] || [] : []} onSaveContext={saveContext} />
           </div>
         </section>
 
