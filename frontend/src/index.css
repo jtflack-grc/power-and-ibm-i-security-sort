@@ -2622,3 +2622,19 @@ iframe:focus-visible {
     border-bottom: 0;
   }
 }
+
+/* CVSS is the primary severity cue; triage context remains separately labelled. */
+.cvss-score { display: inline-flex; flex-direction: column; align-items: flex-end; gap: 2px; flex-shrink: 0; color: var(--muted); line-height: 1.25; }
+.cvss-score .cvss-label { font-size: 10px; letter-spacing: .06em; text-transform: uppercase; }
+.cvss-score strong { font-size: 24px; font-variant-numeric: tabular-nums; }
+.cvss-score small { font-size: 11px; font-weight: 400; }
+.cvss-score > span:last-child { font-size: 11px; }
+.cvss-critical { color: #ff8585; }
+.cvss-high { color: #f0b56a; }
+.cvss-medium { color: #e0cf78; }
+.cvss-low, .cvss-none { color: var(--green); }
+.finding-top { gap: 12px; }
+.issue-hero .cvss-score strong { font-size: 32px; }
+.cvss-vector { margin: 12px 0; color: var(--muted); font-size: 12px; }
+.cvss-vector summary { cursor: pointer; }
+.cvss-vector code { display: block; margin-top: 8px; overflow-wrap: anywhere; }

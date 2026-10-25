@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { CvssScore } from "./CvssScore";
+import { cvssValue } from "../cvss";
 import type { ActionLane } from "./ActionLanesFlow";
 import type { Bucket, Bulletin, Finding } from "../types";
 import { hasIndividualPtfEvidence } from "../ptfEvidence";
@@ -52,6 +54,7 @@ export function FindingsPanel({
   onLaneFilter,
   pasteHitIds = [],
 }: Props) {
+  const [sortOrder, setSortOrder] = useState("cvss");
   const [bucket, setBucket] = useState<Bucket | "all">("all");
   const [includeOlder, setIncludeOlder] = useState(false);
   const [showAll, setShowAll] = useState(false);
@@ -213,7 +216,7 @@ export function FindingsPanel({
     root.scrollTo({ top: 0 });
     const pane = root.closest(".panel-body");
     if (pane instanceof HTMLElement) pane.scrollTo({ top: 0 });
-  }, [findings, bucket, laneFilter, includeOlder]);
+  }, [findings, bucket, laneFilter, includeOlder, sortOrder]);
 
   // Only scroll a row into view after deliberate keyboard moves (not auto-select on load).
   useEffect(() => {
@@ -258,6 +261,12 @@ export function FindingsPanel({
       }}
     >
       <div className="findings-focus-bar">
+        <label className="queue-select">Sort by
+          <select value={sortOrder} onChange={(event) => setSortOrder(event.target.value)}>
+            <option value="cvss">CVSS · highest first</option>
+            <option value="priority">Triage priority</option>
+          </select>
+        </label>
         <label className="queue-select">Priority
           <select value={bucket} onChange={(event) => setBucket(event.target.value as Bucket | "all")}>{BUCKETS.map((value) => <option key={value} value={value}>{value === "all" ? "All priorities" : value}</option>)}</select>
         </label>
@@ -328,6 +337,7 @@ export function FindingsPanel({
       {visibleGroups.map((group) => {
         const isExpanded = expanded.has(group.id);
         const lead = group.findings.reduce((best, finding) => finding.score > best.score ? finding : best, group.findings[0]);
+        const cvssLead = group.findings.reduce((best, finding) => (cvssValue(finding) ?? -1) > (cvssValue(best) ?? -1) ? finding : best, group.findings[0]);
         const published = shortDate(group.published);
         return (
           <section key={group.id} className={`bulletin-group ${group.findings.some((finding) => finding.cve_id === selectedId) ? "selected" : ""}`}>
@@ -336,16 +346,16 @@ export function FindingsPanel({
               if (next.has(group.id)) next.delete(group.id); else next.add(group.id);
               return next;
             })}>
-              <div className="finding-top"><span className="cve-id">{group.findings.length} CVE{group.findings.length === 1 ? "" : "s"}</span><span className="score-pill">{lead.score.toFixed(0)}</span></div>
+              <div className="finding-top"><span className="cve-id">{group.findings.length} CVE{group.findings.length === 1 ? "" : "s"}</span><CvssScore finding={cvssLead} maximum /></div>
               <div className="finding-title">{group.title}</div>
-              <div className="finding-meta">{published && <span>{published}</span>}<span>PSIRT bulletin</span><span>{isExpanded ? "Collapse" : "Expand"}</span></div>
+              <div className="finding-meta">{published && <span>{published}</span>}<span>PSIRT bulletin</span><span>Triage {lead.score.toFixed(0)} · {lead.bucket}</span><span>{isExpanded ? "Collapse" : "Expand"}</span></div>
               <div className="badges"><span className={`badge ${lead.bucket}`}>{lead.bucket}</span>{bulletinIndex.get(group.id)?.change_status === "new" && <span className="badge kev">New snapshot</span>}{bulletinIndex.get(group.id)?.change_status === "modified" && <span className="badge badge-ptf">Remediation updated</span>}{group.findings.some((finding) => finding.on_kev) && <span className="badge kev">KEV</span>}{group.findings.some(hasPtfEvidence) && <span className="badge badge-ptf">PTF</span>}</div>
             </button>
             {isExpanded && <div className="bulletin-cves">{group.findings.map((f) => {
               const selected = selectedId === f.cve_id;
               return <button key={f.cve_id} type="button" data-cve={f.cve_id} className={`finding-row finding-row-child ${selected ? "selected" : ""}`} onClick={() => onSelect(f)}>
-                <div className="finding-top"><span className="cve-id">{f.cve_id}</span><span className="score-pill">{f.score.toFixed(0)}</span></div>
-                <div className="finding-meta">{f.cvss_score != null && <span>CVSS {f.cvss_score}</span>}{f.epss != null && <span>EPSS {(f.epss * 100).toFixed(1)}%</span>}<span className={`badge ${f.bucket}`}>{f.bucket}</span>{f.action_lane && <span className={`badge badge-lane lane-${f.action_lane}`}>{f.action_lane}</span>}{hasPtfEvidence(f) && <span className="badge badge-ptf">PTF</span>}{pasteHitIds.includes(f.cve_id) && <span className="badge badge-paste">paste match</span>}</div>
+                <div className="finding-top"><span className="cve-id">{f.cve_id}</span><CvssScore finding={f} /></div>
+                <div className="finding-meta"><span>Triage {f.score.toFixed(0)}</span>{f.epss != null && <span>EPSS {(f.epss * 100).toFixed(1)}%</span>}<span className={`badge ${f.bucket}`}>{f.bucket}</span>{f.action_lane && <span className={`badge badge-lane lane-${f.action_lane}`}>{f.action_lane}</span>}{hasPtfEvidence(f) && <span className="badge badge-ptf">PTF</span>}{pasteHitIds.includes(f.cve_id) && <span className="badge badge-paste">paste match</span>}</div>
               </button>;
             })}</div>}
           </section>
