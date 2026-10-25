@@ -199,6 +199,32 @@ def _validate_payload_contract(payload: Any) -> None:
         raise ValueError("IBM PSIRT search schema changed: required bulletin fields are absent")
 
 
+def _cve_details(details: str, cve_id: str) -> tuple[str | None, float | None, str | None]:
+    """Only bind metrics inside an explicitly identified CVEID section.
+
+    A multi-CVE bulletin's summary/rating must never be assigned to every CVE.
+    Keep these IBM-specific metrics separate from NVD enrichment.
+    """
+    sections = list(re.finditer(r"\bCVEID\s*:?\s*(CVE-\d{4}-\d{4,})\b", details, re.I))
+    for index, section in enumerate(sections):
+        if section.group(1).upper() != cve_id:
+            continue
+        end = sections[index + 1].start() if index + 1 < len(sections) else len(details)
+        text = details[section.end():end]
+        score_match = re.search(r"CVSS\s+Base\s+score\s*:\s*(\d+(?:\.\d+)?)\b", text, re.I)
+        vector_match = re.search(r"CVSS:[34]\.\d/(?:[A-Z]+:[A-Za-z0-9]+)(?:/[A-Z]+:[A-Za-z0-9]+)+", text)
+        description_match = re.search(r"DESCRIPTION\s*:\s*(.*?)(?=\b(?:CWE|CVSS\s+Source|CVSS\s+Base(?:\s+score)?|CVSS\s+Vector)\s*:|$)", text, re.I)
+        score = float(score_match.group(1)) if score_match else None
+        if score is not None and not 0 <= score <= 10:
+            score = None
+        return (
+            description_match.group(1).strip()[:4000] if description_match else None,
+            score,
+            vector_match.group(0) if vector_match else None,
+        )
+    return None, None, None
+
+
 def parse_psirt_bundle(
     payload: Any, *, published_after: str | None = None
 ) -> PsirtBundle:
@@ -213,7 +239,7 @@ def parse_psirt_bundle(
         details = _plain(
             record.get("field_vulnerability_details")
             or record.get("field_vulnerablity_details"),
-            5000,
+            20000,
         )
         affected = _plain(record.get("field_affected_products"), 3000)
         product = _plain(record.get("field_product"), 200) or "IBM i"
@@ -253,15 +279,25 @@ def parse_psirt_bundle(
             if len(findings) >= _MAX_CVES and cve_id not in findings:
                 break
             description = summary or details or title
+            ibm_description, ibm_score, ibm_vector = _cve_details(details, cve_id)
             finding = Finding(
                 cve_id=cve_id,
                 title=title,
                 description=description,
+                ibm_vulnerability_description=ibm_description,
+                ibm_cvss_score=ibm_score,
+                ibm_cvss_vector=ibm_vector,
+                cvss_score=ibm_score,
+                cvss_vector=ibm_vector,
+                cvss_source="IBM" if ibm_score is not None or ibm_vector else None,
                 published=published,
                 last_modified=_date(
                     record.get("field_modified_date") or record.get("field_updated")
                 ),
-                cvss_severity=_plain(record.get("field_cvss_base_score"), 20).upper() or None,
+                cvss_severity=(
+                    "CRITICAL" if ibm_score >= 9 else "HIGH" if ibm_score >= 7
+                    else "MEDIUM" if ibm_score >= 4 else "LOW" if ibm_score > 0 else "NONE"
+                ) if ibm_score is not None else None,
                 platforms=[
                     PlatformHit(
                         platform=Platform.IBM_I,
@@ -369,8 +405,10 @@ def enrich_psirt_from_nvd(
         extra = nvd.get(cve_id)
         if not extra:
             continue
-        finding.cvss_score = extra.cvss_score
-        finding.cvss_vector = extra.cvss_vector
+        if extra.cvss_score is not None:
+            finding.cvss_score = extra.cvss_score
+            finding.cvss_vector = extra.cvss_vector
+            finding.cvss_source = "NVD"
         finding.cvss_severity = extra.cvss_severity or finding.cvss_severity
         finding.cwes = list(extra.cwes)
         if len(extra.description or "") > len(finding.description or ""):

@@ -5,7 +5,7 @@ import { defineConfig } from "vite";
 export default defineConfig({
   build: {
     outDir: ".context-tests",
-    lib: { entry: "tests/contextAssessment.test.ts", formats: ["es"], fileName: () => "context-tests.mjs" },
+    lib: { entry: "tests/allContextTests.ts", formats: ["es"], fileName: () => "context-tests.mjs" },
     rolldownOptions: { external: [/^node:/] },
   },
 });

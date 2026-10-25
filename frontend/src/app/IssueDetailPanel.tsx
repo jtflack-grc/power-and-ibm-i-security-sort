@@ -1,3 +1,4 @@
+import { OsintAssessmentPanel } from "./OsintAssessmentPanel";
 import { ContextAssessmentPanel } from "./ContextAssessmentPanel";
 import type { Assessment } from "../contextAssessment";
 import { CvssScore } from "./CvssScore";
@@ -144,7 +145,11 @@ export function IssueDetailPanel({ finding, shop, bulletin, generatedAt, context
 
       {finding.cvss_vector && <details className="cvss-vector"><summary>CVSS vector</summary><code>{finding.cvss_vector}</code></details>}
 
-      <ContextAssessmentPanel key={`${contextMode}:${finding.cve_id}`} finding={finding} mode={contextMode} records={contextRecords} onSave={onSaveContext} />
+      <OsintAssessmentPanel finding={finding} generatedAt={generatedAt} />
+
+      <details className="context-editor optional-refinement"><summary>Optional · refine with partition-specific evidence</summary>
+        <ContextAssessmentPanel key={`${contextMode}:${finding.cve_id}`} finding={finding} mode={contextMode} records={contextRecords} onSave={onSaveContext} />
+      </details>
 
       <section className="decision-glance" aria-label="Decision at a glance">
         <h3>Decision at a glance</h3>
