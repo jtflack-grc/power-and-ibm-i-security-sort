@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
   schedule:
     # Daily refresh of public intel snapshot for Pages visitors.
-    - cron: "15 12 * * *"
+    - cron: "17 12 * * *"
   push:
     branches: [main]
     paths:
@@ -23,6 +23,33 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Scheduled runs and Pages deployments do not count as repository activity.
+  # Keep this independent of build so an upstream feed failure cannot stop it.
+  keepalive:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Keep schedule active after 30 quiet days
+        shell: bash
+        run: |
+          last_commit=$(git log -1 --format=%ct)
+          now=$(date +%s)
+          if (( now - last_commit >= 30 * 24 * 60 * 60 )); then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit --allow-empty -m "chore: keep daily vulnerability refresh active"
+            git push origin HEAD:main
+            echo "Created maintenance commit to prevent schedule inactivity." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Recent repository activity; no maintenance commit needed." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 45
