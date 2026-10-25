@@ -5,6 +5,8 @@ import { cvssValue } from "../cvss";
 import type { ActionLane } from "./ActionLanesFlow";
 import type { Bucket, Bulletin, Finding } from "../types";
 import { hasIndividualPtfEvidence } from "../ptfEvidence";
+import { estimateOsint } from "../osintAssessment";
+import { fixSummary } from "../fixSummary";
 
 interface Props {
   findings: Finding[];
@@ -15,6 +17,8 @@ interface Props {
   onLaneFilter: (lane: ActionLane | "all") => void;
   pasteHitIds?: string[];
   contextLabels?: Record<string, string>;
+  previousSnapshotAt?: string | null;
+  comparisonAvailable?: boolean;
 }
 
 const BUCKETS: Array<Bucket | "all"> = ["all", "urgent", "watch", "low"];
@@ -56,6 +60,8 @@ export function FindingsPanel({
   onLaneFilter,
   pasteHitIds = [],
   contextLabels = {},
+  previousSnapshotAt,
+  comparisonAvailable = false,
 }: Props) {
   const [sortOrder, setSortOrder] = useState("cvss");
   const [bucket, setBucket] = useState<Bucket | "all">("all");
@@ -66,7 +72,7 @@ export function FindingsPanel({
   const [productFilter, setProductFilter] = useState("all");
   const [remedyFilter, setRemedyFilter] = useState("all");
   const [publishedFilter, setPublishedFilter] = useState("all");
-  const [changeFilter, setChangeFilter] = useState<"all" | "new" | "modified" | "visit">("all");
+  const [changeFilter, setChangeFilter] = useState<"all" | "new" | "modified" | "visit" | "score" | "fix" | "bulletin-new">("all");
   const [newBulletinIds, setNewBulletinIds] = useState<Set<string>>(new Set());
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const listRef = useRef<HTMLDivElement>(null);
@@ -74,6 +80,7 @@ export function FindingsPanel({
 
   const filtered = useMemo(() => {
     return findings.filter((f) => {
+      if (["new", "score", "fix"].includes(changeFilter) && !f.snapshot_changes?.includes(changeFilter as "new" | "score" | "fix")) return false;
       if (bucket !== "all" && f.bucket !== bucket) return false;
       if (laneFilter !== "all" && (f.action_lane ?? "monitor") !== laneFilter) {
         return false;
@@ -86,7 +93,7 @@ export function FindingsPanel({
       }
       return true;
     });
-  }, [findings, bucket, laneFilter, includeOlder, selectedId, pasteHitIds]);
+  }, [findings, bucket, laneFilter, includeOlder, selectedId, pasteHitIds, changeFilter]);
 
   const olderHidden = useMemo(() => {
     if (includeOlder) return 0;
@@ -138,7 +145,6 @@ export function FindingsPanel({
     () => [...new Set(bulletins.flatMap((bulletin) => bulletin.applicability.map((row) => row.release).filter(Boolean) as string[]))].sort(),
     [bulletins]
   );
-  const snapshotNewCount = useMemo(() => bulletins.filter((item) => item.change_status === "new").length, [bulletins]);
   const snapshotModifiedCount = useMemo(() => bulletins.filter((item) => item.change_status === "modified").length, [bulletins]);
   const completedMonths = useMemo(() => {
     const now = new Date();
@@ -181,7 +187,8 @@ export function FindingsPanel({
     return [...groups.values()].filter((group) => {
       const bulletin = bulletinIndex.get(group.id);
       if (changeFilter === "visit" && !newBulletinIds.has(group.id)) return false;
-      if ((changeFilter === "new" || changeFilter === "modified") && bulletin?.change_status !== changeFilter) return false;
+      if (changeFilter === "modified" && bulletin?.change_status !== "modified") return false;
+      if (changeFilter === "bulletin-new" && bulletin?.change_status !== "new") return false;
       if (publishedFilter === "recent") {
         const stamp = new Date(group.published || "").getTime();
         if (Number.isNaN(stamp) || Date.now() - stamp > 30 * 86_400_000) return false;
@@ -203,10 +210,15 @@ export function FindingsPanel({
     });
   }, [visible, bulletinIndex, releaseFilter, productFilter, remedyFilter, newBulletinIds, changeFilter, publishedFilter]);
   const visibleGroupFindings = useMemo(() => visibleGroups.flatMap((group) => group.findings), [visibleGroups]);
-  const rankedFindings = useMemo(() => [...visibleGroupFindings].sort((a, b) =>
-    sortOrder === "cvss" ? (cvssValue(b) ?? -1) - (cvssValue(a) ?? -1) || b.score - a.score : b.score - a.score
-  ), [visibleGroupFindings, sortOrder]);
-  const navigationFindings = listView === "cves" ? rankedFindings : visibleGroupFindings;
+  const compare = useMemo(() => {
+    const estimates = new Map(findings.map(f => [f.cve_id, estimateOsint(f)]));
+    return (a: Finding, b: Finding) => (sortOrder === "osint"
+      ? estimates.get(b.cve_id)!.high - estimates.get(a.cve_id)!.high || estimates.get(b.cve_id)!.low - estimates.get(a.cve_id)!.low
+      : sortOrder === "cvss" ? (cvssValue(b) ?? -1) - (cvssValue(a) ?? -1) : 0) || b.score - a.score || a.cve_id.localeCompare(b.cve_id);
+  }, [findings, sortOrder]);
+  const rankedFindings = useMemo(() => [...visibleGroupFindings].sort(compare), [visibleGroupFindings, compare]);
+  const rankedGroups = useMemo(() => visibleGroups.map(g => ({ ...g, findings: [...g.findings].sort(compare) })).sort((a, b) => compare(a.findings[0], b.findings[0])), [visibleGroups, compare]);
+  const navigationFindings = listView === "cves" ? rankedFindings : rankedGroups.flatMap(g => g.findings);
 
   useEffect(() => {
     if (!selectedId) return;
@@ -270,6 +282,7 @@ export function FindingsPanel({
       }}
     >
       <div className="queue-opening"><p className="queue-eyebrow">The vulnerability lineup</p><h3>Highest severity. First in view.</h3><p>Start with CVSS, then use exposure, IBM fixes, and your local evidence to decide what happens next.</p></div>
+      <div className="refresh-changes" aria-label="Changes since previous refresh"><strong>Since the previous refresh</strong><p>{comparisonAvailable ? `Compared with ${shortDate(previousSnapshotAt) || "the previous published snapshot"}. Counts cover the full feed; filters still apply.` : "Comparison unavailable for this snapshot. No changes are inferred."}</p>{comparisonAvailable && <div className="refresh-change-buttons">{([['new', 'New CVEs'], ['score', 'Revised scores / vectors'], ['fix', 'New fix packages']] as const).map(([key, label]) => <button type="button" className={`chip ${changeFilter === key ? "active" : ""}`} key={key} onClick={() => setChangeFilter(changeFilter === key ? "all" : key)}>{label}: {findings.filter(f => f.snapshot_changes?.includes(key)).length}</button>)}{changeFilter !== "all" && <button type="button" className="chip" onClick={() => setChangeFilter("all")}>Clear update filter</button>}</div>}</div>
       <div className="findings-focus-bar">
         <label className="queue-select">View
           <select value={listView} onChange={(event) => setListView(event.target.value)}><option value="cves">CVSS score listing</option><option value="bulletins">Group by bulletin</option></select>
@@ -277,6 +290,7 @@ export function FindingsPanel({
         <label className="queue-select">Sort by
           <select value={sortOrder} onChange={(event) => setSortOrder(event.target.value)}>
             <option value="cvss">CVSS · highest first</option>
+            <option value="osint">IBM i range · upper bound first</option>
             <option value="priority">Triage priority</option>
           </select>
         </label>
@@ -299,8 +313,11 @@ export function FindingsPanel({
         <label className="queue-select">Updates
           <select value={changeFilter} onChange={(event) => setChangeFilter(event.target.value as typeof changeFilter)}>
             <option value="all">All updates</option>
-            {snapshotNewCount > 0 && <option value="new">New snapshot ({snapshotNewCount})</option>}
-            {snapshotModifiedCount > 0 && <option value="modified">Remediation updated ({snapshotModifiedCount})</option>}
+            <option value="new">New CVEs</option>
+            <option value="score">Revised scores / vectors</option>
+            <option value="fix">New fix packages</option>
+            <option value="bulletin-new">New bulletins</option>
+            {snapshotModifiedCount > 0 && <option value="modified">Bulletin updated ({snapshotModifiedCount})</option>}
             {newBulletinIds.size > 0 && <option value="visit">New since last visit ({newBulletinIds.size})</option>}
           </select>
         </label>
@@ -342,6 +359,7 @@ export function FindingsPanel({
         </details>
       </div>
       <div className="filter-count">
+        {sortOrder === "osint" && <span>IBM i upper bound first; ties use lower bound, then triage. </span>}
         Showing {visibleGroups.length} bulletins · {visibleGroupFindings.length} of {findings.length} CVEs
         {!showAll && filtered.length > FOCUS_LIMIT ? ` · focus ${FOCUS_LIMIT}` : ""}
         {olderHidden > 0 ? ` · ${olderHidden} older hidden` : ""}
@@ -359,11 +377,13 @@ export function FindingsPanel({
           <span className="lineup-rank" aria-label={`Position ${index + 1}`}>{String(index + 1).padStart(2, "0")}</span>
           <ScoreComparison finding={finding} />
           <span className="lineup-description"><span className="cve-id">{finding.cve_id}</span><span className="finding-title">{finding.title}</span><span className="finding-meta">{shortDate(finding.published) || "Date unavailable"} · Triage {finding.score.toFixed(0)}{finding.epss != null ? ` · EPSS ${(finding.epss * 100).toFixed(1)}%` : ""}</span>
+          <span className={`fix-cue ${fixSummary(finding, bulletinIndex.get(finding.bulletin_id || "")).available ? "available" : ""}`}>{fixSummary(finding, bulletinIndex.get(finding.bulletin_id || "")).label}<small>{fixSummary(finding, bulletinIndex.get(finding.bulletin_id || "")).scope}</small></span>
+          {!!finding.snapshot_changes?.length && <span className="finding-meta">{finding.snapshot_changes.map(change => ({new: "New CVE", score: "Score / vector revised", fix: "New fix package"}[change])).join(" · ")}</span>}
           {contextLabels[finding.cve_id] && <span className="context-list-label">{contextLabels[finding.cve_id]}</span>}</span>
-          <span className="lineup-signals badges"><span className={`badge ${finding.bucket}`}>{finding.bucket}</span>{finding.on_kev && <span className="badge kev">KEV</span>}{finding.action_lane && <span className={`badge badge-lane lane-${finding.action_lane}`}>{finding.action_lane}</span>}{hasPtfEvidence(finding) && <span className="badge badge-ptf">PTF</span>}{pasteHitIds.includes(finding.cve_id) && <span className="badge badge-paste">paste match</span>}{bulletinIndex.get(finding.bulletin_id || "")?.change_status === "new" && <span className="badge kev">New snapshot</span>}{bulletinIndex.get(finding.bulletin_id || "")?.change_status === "modified" && <span className="badge badge-ptf">Remediation updated</span>}</span>
+          <span className="lineup-signals badges"><span className={`badge ${finding.bucket}`}>{finding.bucket}</span>{finding.on_kev && <span className="badge kev">KEV</span>}{finding.action_lane && <span className={`badge badge-lane lane-${finding.action_lane}`}>{finding.action_lane}</span>}{hasPtfEvidence(finding) && <span className="badge badge-ptf">PTF</span>}{pasteHitIds.includes(finding.cve_id) && <span className="badge badge-paste">paste match</span>}{bulletinIndex.get(finding.bulletin_id || "")?.change_status === "new" && <span className="badge kev">New bulletin</span>}{bulletinIndex.get(finding.bulletin_id || "")?.change_status === "modified" && <span className="badge badge-ptf">Bulletin updated</span>}</span>
           <span className="lineup-open">Review issue →</span>
         </button>)}
-      </div> : visibleGroups.map((group) => {
+      </div> : rankedGroups.map((group) => {
         const isExpanded = expanded.has(group.id);
         const lead = group.findings.reduce((best, finding) => finding.score > best.score ? finding : best, group.findings[0]);
         const cvssLead = group.findings.reduce((best, finding) => (cvssValue(finding) ?? -1) > (cvssValue(best) ?? -1) ? finding : best, group.findings[0]);
@@ -378,12 +398,14 @@ export function FindingsPanel({
               <div className="finding-top"><span className="cve-id">{group.findings.length} CVE{group.findings.length === 1 ? "" : "s"}</span><CvssScore finding={cvssLead} maximum /></div>
               <div className="finding-title">{group.title}</div>
               <div className="finding-meta">{published && <span>{published}</span>}<span>PSIRT bulletin</span><span>Triage {lead.score.toFixed(0)} · {lead.bucket}</span><span>{isExpanded ? "Collapse" : "Expand"}</span></div>
-              <div className="badges"><span className={`badge ${lead.bucket}`}>{lead.bucket}</span>{bulletinIndex.get(group.id)?.change_status === "new" && <span className="badge kev">New snapshot</span>}{bulletinIndex.get(group.id)?.change_status === "modified" && <span className="badge badge-ptf">Remediation updated</span>}{group.findings.some((finding) => finding.on_kev) && <span className="badge kev">KEV</span>}{group.findings.some(hasPtfEvidence) && <span className="badge badge-ptf">PTF</span>}</div>
+              <div className="badges"><span className={`badge ${lead.bucket}`}>{lead.bucket}</span>{bulletinIndex.get(group.id)?.change_status === "new" && <span className="badge kev">New bulletin</span>}{bulletinIndex.get(group.id)?.change_status === "modified" && <span className="badge badge-ptf">Bulletin updated</span>}{group.findings.some((finding) => finding.on_kev) && <span className="badge kev">KEV</span>}{group.findings.some(hasPtfEvidence) && <span className="badge badge-ptf">PTF</span>}</div>
             </button>
             {isExpanded && <div className="bulletin-cves">{group.findings.map((f) => {
               const selected = selectedId === f.cve_id;
               return <button key={f.cve_id} type="button" data-cve={f.cve_id} className={`finding-row finding-row-child ${selected ? "selected" : ""}`} onClick={() => onSelect(f)}>
                 <div className="finding-top"><span className="cve-id">{f.cve_id}</span><ScoreComparison finding={f} /></div>
+                <div className="fix-cue">{fixSummary(f, bulletinIndex.get(group.id)).label}<small>{fixSummary(f, bulletinIndex.get(group.id)).scope}</small></div>
+                {!!f.snapshot_changes?.length && <div className="finding-meta">{f.snapshot_changes.map(change => ({new: "New CVE", score: "Score / vector revised", fix: "New fix package"}[change])).join(" · ")}</div>}
                 <div className="finding-meta"><span>Triage {f.score.toFixed(0)}</span>{contextLabels[f.cve_id] && <span>{contextLabels[f.cve_id]}</span>}{f.epss != null && <span>EPSS {(f.epss * 100).toFixed(1)}%</span>}<span className={`badge ${f.bucket}`}>{f.bucket}</span>{f.action_lane && <span className={`badge badge-lane lane-${f.action_lane}`}>{f.action_lane}</span>}{hasPtfEvidence(f) && <span className="badge badge-ptf">PTF</span>}{pasteHitIds.includes(f.cve_id) && <span className="badge badge-paste">paste match</span>}</div>
               </button>;
             })}</div>}

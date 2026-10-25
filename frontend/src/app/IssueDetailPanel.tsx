@@ -2,6 +2,7 @@ import { OsintAssessmentPanel } from "./OsintAssessmentPanel";
 import { ContextAssessmentPanel } from "./ContextAssessmentPanel";
 import type { Assessment } from "../contextAssessment";
 import { ScoreComparison } from "./ScoreComparison";
+import { fixSummary } from "../fixSummary";
 import { useEffect, useState } from "react";
 import type { Bulletin, Finding } from "../types";
 import { PLATFORM_LABELS } from "../types";
@@ -56,9 +57,8 @@ export function IssueDetailPanel({ finding, shop, bulletin, generatedAt, context
 
   const steps = finding.resolution_steps ?? [];
   const interims = finding.interim_mitigations ?? [];
-  const hasPackage = steps.some((s) =>
-    ["ptf", "apar", "bulletin"].includes(String(s.kind ?? ""))
-  );
+  const fix = fixSummary(finding, bulletin);
+  const hasPackage = fix.available;
   const resolveSummary = cleanSentence(
     steps.find((step) => ["ptf", "ptf_group", "apar", "bulletin"].includes(String(step.kind)))?.detail,
     "Confirm your product and release in IBM's bulletin, then identify the matching fix package."
@@ -144,6 +144,8 @@ export function IssueDetailPanel({ finding, shop, bulletin, generatedAt, context
       </div>
 
       {finding.cvss_vector && <details className="cvss-vector"><summary>CVSS vector</summary><code>{finding.cvss_vector}</code></details>}
+
+      <section className="fix-callout" aria-label="IBM fix availability"><strong>{fix.label}</strong><p>{fix.scope}</p><p>{fix.detail}</p><a href={ibmUrl} target="_blank" rel="noreferrer">Open IBM bulletin and fix instructions ↗</a></section>
 
       <OsintAssessmentPanel finding={finding} generatedAt={generatedAt} />
 

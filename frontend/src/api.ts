@@ -34,7 +34,7 @@ export async function probeBackend(): Promise<boolean> {
 /** Pages ships a scheduled live-triage.json (no open API). */
 export async function probePublishedLive(): Promise<boolean> {
   try {
-    const res = await fetch(url("live-triage.json"), { method: "GET" });
+    const res = await fetch(url("live-triage.json"), { method: "GET", cache: "no-cache" });
     if (!res.ok) return false;
     const data = (await res.json()) as TriageResult;
     return Boolean(data?.findings?.length);
@@ -48,7 +48,7 @@ export async function loadPublishedLive(): Promise<TriageResult> {
   let lastErr: Error | null = null;
   for (const path of paths) {
     try {
-      const res = await fetch(path);
+      const res = await fetch(path, { cache: "no-cache" });
       if (!res.ok) throw new Error(`Published live load failed (${res.status})`);
       const data = (await res.json()) as TriageResult;
       if (!data?.findings?.length) throw new Error("Published live snapshot is empty");

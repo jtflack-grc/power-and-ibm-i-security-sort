@@ -45,6 +45,7 @@ export interface OsintEndpoint { name: string; score: number; vector?: string; a
 export interface OsintAssessment {
   model: string; reviewed: string; low: number; high: number;
   basis: string; coverage: string; profile: string; priority: string;
+  rationale: string; uncertainty: string;
   facts: string[]; unknowns: string[]; endpoints: OsintEndpoint[]; sources: OsintSource[];
   controlMap: Array<{ role: string; inference: string }>;
 }
@@ -122,6 +123,8 @@ export function estimateOsint(f: Finding): OsintAssessment {
   const priority = f.on_kev ? "Expedite applicability / remediation" : high >= 9 ? "Prioritize scope and fix review" : high >= 7 ? "Schedule applicability / fix review" : "Review with routine maintenance";
   return {
     model: OSINT_MODEL, reviewed: OSINT_REVIEWED, low, high, basis, coverage, profile, priority, facts, unknowns, endpoints, sources,
+    rationale: !selectedVector ? "Limited public detail: a broad provisional range is retained." : boundary ? "Authority-boundary flaw: no generic IBM i protection discount." : runtime ? "Range reflects limited versus broad service-job authority and workload impact." : "Published impacts retained; critical-workload requirements set the upper scenario.",
+    uncertainty: !selectedVector ? "Full vector unavailable; prerequisites and impact remain unresolved." : "Scenario assumptions: effective authority, workload criticality, exposure, and fix state are unverified. Source disagreements remain inside the range.",
     controlMap: [
       { role: "Prevention / resistance", inference: boundary ? "Authority-boundary defect: platform access controls are not credited as a generic mitigation." : runtime ? "Lower endpoint assumes a bounded service/job authority path; upper endpoint retains broad impact. The authority sources explain why both scenarios are plausible." : "No component-specific prevention credit inferred from platform capabilities alone." },
       { role: "Prevention / avoidance", inference: "No network isolation or exit-control deployment is known from these public sources; attack-vector metrics are not reduced." },

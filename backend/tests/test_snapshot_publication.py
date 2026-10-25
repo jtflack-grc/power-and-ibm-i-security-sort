@@ -44,11 +44,12 @@ def test_snapshot_change_annotation_distinguishes_new_and_modified(tmp_path):
     old_changed["title"] = "Old title"
     previous = {
         "generated_at": "2026-08-08T12:00:00Z",
+        "findings": [],
         "bulletins": [unchanged.model_dump(mode="json"), old_changed],
     }
     path = tmp_path / "previous.json"
     path.write_text(json.dumps(previous), encoding="utf-8")
-    result = SimpleNamespace(bulletins=[unchanged, modified, new], previous_snapshot_at=None)
+    result = SimpleNamespace(bulletins=[unchanged, modified, new], findings=[], previous_snapshot_at=None)
 
     annotate_snapshot_changes(result, path)
 

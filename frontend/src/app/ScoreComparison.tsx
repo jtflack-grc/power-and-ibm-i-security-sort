@@ -12,5 +12,6 @@ export const ScoreComparison = memo(function ScoreComparison({ finding }: { find
       <strong>{estimate.low.toFixed(1)}–{estimate.high.toFixed(1)}<small> / 10</small></strong>
       <span>Estimated range</span>
     </span>
+    <span className="score-rationale">{estimate.rationale}<small>{estimate.coverage.startsWith("IBM per-CVE") ? "IBM per-CVE vector" : estimate.coverage.startsWith("Limited") ? "Limited source detail" : "CVE vector"} · Deployment assumptions unverified</small></span>
   </span>;
 });

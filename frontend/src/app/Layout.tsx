@@ -337,6 +337,8 @@ export function Layout({
               <FindingsPanel
                 findings={findings}
                 bulletins={result?.bulletins}
+                previousSnapshotAt={result?.previous_snapshot_at}
+                comparisonAvailable={result?.snapshot_comparison_available}
                 selectedId={selectedResolved?.cve_id ?? null}
                 laneFilter={laneFilter}
                 onLaneFilter={setLaneFilter}

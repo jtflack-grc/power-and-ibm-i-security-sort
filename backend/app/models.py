@@ -84,6 +84,7 @@ class Bulletin(BaseModel):
 
 
 class Finding(BaseModel):
+    snapshot_changes: list[Literal["new", "score", "fix"]] = Field(default_factory=list)
     cve_id: str
     title: str
     description: str
@@ -145,6 +146,7 @@ class TriageResult(BaseModel):
     notes: list[str] = Field(default_factory=list)
     flagship_cve: str | None = None
     previous_snapshot_at: str | None = None
+    snapshot_comparison_available: bool = False
 
 
 class ProgressEvent(BaseModel):
