@@ -2718,6 +2718,35 @@ body:has(.cvss-first-layout) { overflow: auto; }
 .osint-assessment .context-result strong small { font-size: .8rem; color: var(--muted); }
 .osint-assessment li { margin-bottom: .6rem; font-size: .85rem; }
 .optional-refinement { margin-bottom: 1.25rem; }
+
+/* Give each CVE's published severity and IBM i estimate a shared score rail. */
+.score-comparison { display: grid; grid-template-columns: 5.5rem minmax(0, 1fr); align-items: start; gap: 1rem; min-width: 0; }
+.osint-score { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 2px; color: var(--green); line-height: 1.25; min-width: 0; }
+.osint-score .cvss-label { font-size: 10px; letter-spacing: .06em; text-transform: uppercase; }
+.osint-score strong { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.osint-score small { font-size: 10px; font-weight: 400; }
+.osint-score > span:last-child { font-size: 11px; }
+.score-comparison .cvss-score { align-items: flex-start; }
+.score-comparison .cvss-score strong, .score-comparison .osint-score strong { font-size: 1.8rem; white-space: nowrap; }
+.cvss-lineup-row { grid-template-columns: 2rem 19rem minmax(0, 1fr) minmax(100px, 140px) 6rem; gap: 1.25rem; }
+.cvss-lineup-row .score-comparison { width: 100%; }
+.issue-hero .finding-top { flex-wrap: wrap; }
+.issue-hero .score-comparison { flex: 1 1 280px; max-width: 100%; }
+.issue-hero .score-comparison .cvss-score strong, .issue-hero .score-comparison .osint-score strong { font-size: 2rem; }
+.finding-row-child .finding-top { flex-wrap: wrap; }
+.finding-row-child .score-comparison { flex: 1 1 280px; }
+@media (max-width: 1100px) and (min-width: 981px) {
+  .cvss-lineup-row { grid-template-columns: 1.75rem 18rem minmax(0, 1fr) 100px; gap: 1rem; }
+  .cvss-lineup-row .lineup-open { grid-column: 3 / -1; text-align: left; }
+}
+@media (max-width: 980px) {
+  .cvss-lineup-row { grid-template-columns: 1.5rem minmax(0, 1fr) minmax(0, 1fr); gap: .75rem; }
+  .cvss-lineup-row .score-comparison { grid-column: 2 / -1; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); gap: .5rem; }
+  .cvss-lineup-row .score-comparison .cvss-score strong, .cvss-lineup-row .score-comparison .osint-score strong { font-size: 1.6rem; }
+  .cvss-lineup-row .lineup-description, .cvss-lineup-row .lineup-signals, .cvss-lineup-row .lineup-open { grid-column: 2 / -1; }
+  .issue-hero .score-comparison { grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); gap: .5rem; }
+  .issue-hero .score-comparison .cvss-score strong, .issue-hero .score-comparison .osint-score strong { font-size: 1.7rem; }
+}
 @media (max-width: 600px) {
   .cvss-first-layout .site-header { flex-wrap: wrap; padding: .75rem; gap: .75rem; height: auto; }
   .cvss-first-layout .header-actions { width: 100%; min-width: 0; flex-wrap: wrap; gap: .5rem; }

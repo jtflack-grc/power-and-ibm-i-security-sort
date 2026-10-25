@@ -1,7 +1,7 @@
 import { OsintAssessmentPanel } from "./OsintAssessmentPanel";
 import { ContextAssessmentPanel } from "./ContextAssessmentPanel";
 import type { Assessment } from "../contextAssessment";
-import { CvssScore } from "./CvssScore";
+import { ScoreComparison } from "./ScoreComparison";
 import { useEffect, useState } from "react";
 import type { Bulletin, Finding } from "../types";
 import { PLATFORM_LABELS } from "../types";
@@ -128,7 +128,7 @@ export function IssueDetailPanel({ finding, shop, bulletin, generatedAt, context
       <div className="issue-hero">
         <div className="finding-top">
           <span className="cve-id">{finding.cve_id}</span>
-          <CvssScore finding={finding} />
+          <ScoreComparison finding={finding} />
         </div>
       </div>
 
