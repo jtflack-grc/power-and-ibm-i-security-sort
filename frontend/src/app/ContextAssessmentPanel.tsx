@@ -53,7 +53,7 @@ export function ContextAssessmentPanel({ finding, mode, records, onSave }: Props
     const link = document.createElement("a"); link.href = url; link.download = `${finding.cve_id}-ibmi-context.${format}`; link.click(); URL.revokeObjectURL(url);
   };
   return <section className="context-panel" aria-labelledby="context-title">
-    <header className="context-heading"><div><p className="queue-eyebrow">Evidence changes the picture</p><h3 id="context-title">IBM i contextual assessment</h3></div><span className="badge">Experimental v0.1</span></header>
+    <header className="context-heading"><div><p className="queue-eyebrow">Optional local validation</p><h3 id="context-title">Partition-specific refinement</h3></div><span className="badge">Experimental v0.1</span></header>
     <div className="context-result" aria-live="polite">
       <div><span>IBM i contextual range</span><strong>{result.range ? `${result.range.low.toFixed(1)}–${result.range.high.toFixed(1)}` : "Not assessed"}</strong><small>{result.range ? `CVSS ${result.range.version}${result.range.version === "4.0" ? " scenario envelope" : " Environmental"} · / 10` : "Published CVSS stays unchanged"}</small></div>
       <div><span>Response priority</span><strong className="context-disposition">{result.disposition}</strong><small>{mode === "sample" ? "Sample context · separate from live assessments" : "Local partition context"}</small></div>

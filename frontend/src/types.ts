@@ -65,6 +65,10 @@ export interface Finding {
   cvss_score?: number | null;
   cvss_severity?: string | null;
   cvss_vector?: string | null;
+  cvss_source?: string | null;
+  ibm_cvss_score?: number | null;
+  ibm_cvss_vector?: string | null;
+  ibm_vulnerability_description?: string | null;
   cwes: string[];
   platforms: PlatformHit[];
   on_kev: boolean;

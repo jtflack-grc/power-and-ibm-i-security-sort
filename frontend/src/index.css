@@ -2714,3 +2714,12 @@ body:has(.cvss-first-layout) { overflow: auto; }
   .lineup-open { grid-column: 3; text-align: left; }
   .cvss-first-layout .panel-head { flex-wrap: wrap; }
 }
+
+.osint-assessment .context-result strong small { font-size: .8rem; color: var(--muted); }
+.osint-assessment li { margin-bottom: .6rem; font-size: .85rem; }
+.optional-refinement { margin-bottom: 1.25rem; }
+@media (max-width: 600px) {
+  .cvss-first-layout .site-header { flex-wrap: wrap; padding: .75rem; gap: .75rem; height: auto; }
+  .cvss-first-layout .header-actions { width: 100%; min-width: 0; flex-wrap: wrap; gap: .5rem; }
+  .cvss-first-layout .header-actions .button { flex: 1 1 90px; }
+}

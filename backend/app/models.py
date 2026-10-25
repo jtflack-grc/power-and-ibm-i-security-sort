@@ -92,6 +92,10 @@ class Finding(BaseModel):
     cvss_score: float | None = None
     cvss_severity: str | None = None
     cvss_vector: str | None = None
+    cvss_source: str | None = None
+    ibm_cvss_score: float | None = None
+    ibm_cvss_vector: str | None = None
+    ibm_vulnerability_description: str | None = None
     cwes: list[str] = Field(default_factory=list)
     platforms: list[PlatformHit] = Field(default_factory=list)
     on_kev: bool = False
