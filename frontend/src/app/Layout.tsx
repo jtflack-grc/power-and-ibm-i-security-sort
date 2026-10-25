@@ -1,4 +1,3 @@
-import { estimateOsint } from "../osintAssessment";
 import { useEffect, useMemo, useState } from "react";
 import type { Finding, ProgressEvent, TriageResult } from "../types";
 import { assess, readStore, STORAGE_KEY, storeKey } from "../contextAssessment";
@@ -92,12 +91,10 @@ export function Layout({
   const findings = useMemo(() => result?.findings ?? [], [result?.findings]);
   const contextMode = result?.mode || "unknown";
   const contextLabels = useMemo(() => Object.fromEntries(findings.map(finding => {
-    const estimate = estimateOsint(finding);
-    const automatic = `IBM i OSINT ${estimate.low.toFixed(1)}–${estimate.high.toFixed(1)} · Estimated`;
     const record = contextStore[storeKey(contextMode, finding.cve_id)]?.[0];
-    if (!record) return [finding.cve_id, automatic];
+    if (!record) return [finding.cve_id, ""];
     const assessment = assess(record, finding, assessmentClock);
-    return [finding.cve_id, automatic + (assessment.range ? ` · Local ${assessment.range.low.toFixed(1)}–${assessment.range.high.toFixed(1)} (${record.asset})` : "")];
+    return [finding.cve_id, assessment.range ? `Local refinement ${assessment.range.low.toFixed(1)}–${assessment.range.high.toFixed(1)} (${record.asset})` : `Local evidence · ${assessment.disposition}`];
   })), [findings, contextStore, contextMode, assessmentClock]);
   const publishedStamp = formatStamp(result?.generated_at);
   const modeLabel =
