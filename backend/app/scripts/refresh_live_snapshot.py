@@ -41,12 +41,31 @@ def annotate_snapshot_changes(result: Any, previous_path: Path | None) -> None:
         return
     try:
         previous = json.loads(previous_path.read_text(encoding="utf-8"))
+        if not isinstance(previous, dict) or not isinstance(previous.get("findings"), list) or not previous.get("generated_at"):
+            return
         old_bulletins = {
             item.get("bulletin_id"): item
             for item in previous.get("bulletins", [])
             if isinstance(item, dict) and item.get("bulletin_id")
         }
         result.previous_snapshot_at = previous.get("generated_at")
+        result.snapshot_comparison_available = True
+        old_findings = {item["cve_id"]: item for item in previous["findings"] if isinstance(item, dict) and item.get("cve_id")}
+        score_fields = ("cvss_score", "cvss_vector", "cvss_source", "ibm_cvss_score", "ibm_cvss_vector")
+        for finding in result.findings:
+            finding.snapshot_changes = []
+            old = old_findings.get(finding.cve_id)
+            if old is None:
+                finding.snapshot_changes.append("new")
+                continue
+            if any(getattr(finding, key) != old.get(key) for key in score_fields):
+                finding.snapshot_changes.append("score")
+            bulletin = next((b for b in result.bulletins if b.bulletin_id == finding.bulletin_id), None)
+            old_bulletin = old_bulletins.get(finding.bulletin_id)
+            old_fixes = _fix_packages(old, old_bulletin)
+            new_fixes = _fix_packages(finding.model_dump(mode="json"), bulletin.model_dump(mode="json") if bulletin else None)
+            if new_fixes - old_fixes:
+                finding.snapshot_changes.append("fix")
         for bulletin in result.bulletins:
             old = old_bulletins.get(bulletin.bulletin_id)
             if old is None:
@@ -56,6 +75,24 @@ def annotate_snapshot_changes(result: Any, previous_path: Path | None) -> None:
             bulletin.change_status = "unchanged" if old_hash == _bulletin_fingerprint(bulletin) else "modified"
     except (OSError, ValueError, TypeError, json.JSONDecodeError):
         return
+
+
+def _fix_packages(finding: dict, bulletin: dict | None) -> set[str]:
+    """Compare actual package evidence, excluding APAR-only or editorial changes."""
+    packages = set()
+    for row in (bulletin or {}).get("applicability", []):
+        scope = (row.get("product_id"), row.get("release"), row.get("release_system"))
+        for kind in ("individual_ptfs", "group_ptfs"):
+            for package in row.get(kind, []):
+                level = row.get("group_ptf_levels", {}).get(package) if kind == "group_ptfs" else None
+                packages.add(json.dumps([scope, kind, package, level]))
+    # Structured bulletin rows are preferred; fallback only for older feeds.
+    if not packages:
+        import re
+        for step in finding.get("resolution_steps", []):
+            if step.get("kind") in ("ptf", "ptf_group", "summary", "snippet", "bulletin"):
+                packages.update(re.findall(r"\b(?:SI|SJ|MF|MJ|UJ|UI|SE|UA|UB|UC|SF)\d{4,7}\b", f"{step.get('title', '')} {step.get('detail', '')}", re.I))
+    return packages
 
 
 def publication_safe(result: Any) -> tuple[bool, str]:

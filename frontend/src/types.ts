@@ -57,6 +57,7 @@ export interface Bulletin {
 }
 
 export interface Finding {
+  snapshot_changes?: Array<"new" | "score" | "fix">;
   cve_id: string;
   title: string;
   description: string;
@@ -133,6 +134,7 @@ export interface TriageResult {
   notes?: string[];
   flagship_cve?: string;
   previous_snapshot_at?: string | null;
+  snapshot_comparison_available?: boolean;
 }
 
 export interface ProgressEvent {

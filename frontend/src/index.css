@@ -2752,3 +2752,12 @@ body:has(.cvss-first-layout) { overflow: auto; }
   .cvss-first-layout .header-actions { width: 100%; min-width: 0; flex-wrap: wrap; gap: .5rem; }
   .cvss-first-layout .header-actions .button { flex: 1 1 90px; }
 }
+.score-rationale { grid-column: 1 / -1; font-size: .75rem; line-height: 1.45; color: var(--text-muted, #aaa); white-space: normal; }
+.score-rationale small { display: block; margin-top: .35rem; font-size: .65rem; color: #b2c7b9; }
+.refresh-changes, .fix-callout, .assessment-explainer { padding: 1rem; margin: 1rem 0; border: 1px solid #355846; background: #0d1711; line-height: 1.5; }
+.refresh-changes p, .fix-callout p, .assessment-explainer p { margin: .4rem 0; font-size: .8rem; }
+.refresh-change-buttons { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .75rem; }
+.fix-cue { display: block; margin-top: .5rem; font-size: .78rem; color: #c4bda5; }
+.fix-cue.available, .fix-callout > strong { color: #80dca5; }
+.fix-cue small { display: block; margin-top: .2rem; font-size: .7rem; color: #aaa; }
+.issue-hero .score-comparison { max-width: 34rem; }
