@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Finding, ProgressEvent, TriageResult } from "../types";
+import { cvssValue } from "../cvss";
 import { FLAGSHIP_CVE, FlagshipWalkthrough } from "./FlagshipWalkthrough";
 import type { ActionLane } from "./ActionLanesFlow";
 import { FeedHealthStrip } from "./FeedHealthStrip";
@@ -88,7 +89,7 @@ export function Layout({
   const flagship =
     findings.find((f) => f.cve_id === (result?.flagship_cve || FLAGSHIP_CVE)) ?? null;
   const emptyLive = result?.mode === "live" && findings.length === 0;
-  const scopedFindings = findings;
+  const scopedFindings = useMemo(() => [...findings].sort((a, b) => (cvssValue(b) ?? -1) - (cvssValue(a) ?? -1) || b.score - a.score), [findings]);
 
   useEffect(() => {
     if (!scopedFindings.length) {
@@ -115,10 +116,11 @@ export function Layout({
     setSelected(f);
     setPane("issue");
     setShowFlagship(false);
+    requestAnimationFrame(() => document.getElementById("issue-workbench")?.focus());
   };
 
   return (
-    <div className="app-shell">
+    <div className="app-shell cvss-first-layout">
       <header className="site-header">
         <a
           className="brand"
@@ -209,22 +211,15 @@ export function Layout({
       </div>
 
       <main className="panel-grid">
-        <section className={`panel ${pane !== "findings" ? "hidden-mobile" : ""}`}>
+        <section id="cvss-listing" className={`panel findings-panel-shell ${pane !== "findings" ? "hidden-mobile" : ""}`}>
           <div className="panel-head">
-            <h2>Findings</h2>
+            <h2>CVSS score listing</h2>
             <div className="meta">
               {scopedFindings.length} · {modeLabel}
               {liveRunning ? " · live bg" : ""}
             </div>
           </div>
           <div className="panel-body">
-            {result?.mode === "sample" && (
-              <FlagshipWalkthrough
-                finding={flagship}
-                onOpen={openFinding}
-                visible={showFlagship}
-              />
-            )}
             {liveRunning && !result && (
               <LiveWaitCallout
                 progress={progress}
@@ -328,12 +323,20 @@ export function Layout({
                 pasteHitIds={[]}
               />
             )}
+            {result?.mode === "sample" && (
+              <FlagshipWalkthrough
+                finding={flagship}
+                onOpen={openFinding}
+                visible={showFlagship}
+              />
+            )}
           </div>
         </section>
 
-        <section className={`panel issue-panel-shell ${pane !== "issue" ? "hidden-mobile" : ""}`}>
+        <section id="issue-workbench" tabIndex={-1} aria-label="Selected issue workbench" className={`panel issue-panel-shell ${pane !== "issue" ? "hidden-mobile" : ""}`}>
           <div className="panel-head">
             <h2>Issue</h2>
+            <a className="panel-source-button" href="#cvss-listing" onClick={() => setPane("findings")}>Back to CVSS listing ↑</a>
             <div className="meta">{selectedResolved?.cve_id ?? "select one"}</div>
           </div>
           <div className="panel-body">

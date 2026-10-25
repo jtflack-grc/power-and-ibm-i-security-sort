@@ -89,8 +89,8 @@ export function AboutOverlay({ mode, onClose, onReplayIntro }: Props) {
             <div className="welcome-rail-map" aria-label="The three application rails">
               <section>
                 <span className="welcome-rail-number">01</span>
-                <h2>Findings</h2>
-                <p>Start with IBM&apos;s newest published issues and narrow the queue with direct filters.</p>
+                <h2>CVSS lineup</h2>
+                <p>Start with the highest CVSS scores, then narrow the queue with all your existing filters.</p>
               </section>
               <section>
                 <span className="welcome-rail-number">02</span>
@@ -107,7 +107,7 @@ export function AboutOverlay({ mode, onClose, onReplayIntro }: Props) {
             <div className="welcome-first-pass">
               <strong>Your first pass</strong>
               <ol>
-                <li>Select a recent finding in the left rail.</li>
+                <li>Select a CVE from the score listing, highest severity first.</li>
                 <li>Review its ranking levers and IBM remediation path.</li>
                 <li>Run the ACS SQL kit and compare sanitized local fix state.</li>
               </ol>

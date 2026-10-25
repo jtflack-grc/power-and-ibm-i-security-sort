@@ -57,7 +57,8 @@ export function FindingsPanel({
   const [sortOrder, setSortOrder] = useState("cvss");
   const [bucket, setBucket] = useState<Bucket | "all">("all");
   const [includeOlder, setIncludeOlder] = useState(false);
-  const [showAll, setShowAll] = useState(false);
+  const [showAll, setShowAll] = useState(true);
+  const [listView, setListView] = useState("cves");
   const [releaseFilter, setReleaseFilter] = useState("all");
   const [productFilter, setProductFilter] = useState("all");
   const [remedyFilter, setRemedyFilter] = useState("all");
@@ -99,7 +100,7 @@ export function FindingsPanel({
   }, [findings, includeOlder, selectedId, pasteHitIds, bucket, laneFilter]);
 
   const visible = useMemo(() => {
-    if (showAll || publishedFilter !== "all" || filtered.length <= FOCUS_LIMIT) return filtered;
+    if (showAll || publishedFilter !== "all" || changeFilter !== "all" || releaseFilter !== "all" || productFilter !== "all" || remedyFilter !== "all" || filtered.length <= FOCUS_LIMIT) return filtered;
     const head = filtered.slice(0, FOCUS_LIMIT);
     // A source-extracted PTF unlocks the verification rail, so retain those
     // sparse rows in the focused queue even when rank places them below 40.
@@ -113,7 +114,7 @@ export function FindingsPanel({
       if (selected) return [...head, selected];
     }
     return head;
-  }, [filtered, showAll, selectedId, publishedFilter]);
+  }, [filtered, showAll, selectedId, publishedFilter, changeFilter, releaseFilter, productFilter, remedyFilter]);
 
   const bulletinIndex = useMemo(
     () => new Map(bulletins.map((bulletin) => [bulletin.bulletin_id, bulletin])),
@@ -199,6 +200,10 @@ export function FindingsPanel({
     });
   }, [visible, bulletinIndex, releaseFilter, productFilter, remedyFilter, newBulletinIds, changeFilter, publishedFilter]);
   const visibleGroupFindings = useMemo(() => visibleGroups.flatMap((group) => group.findings), [visibleGroups]);
+  const rankedFindings = useMemo(() => [...visibleGroupFindings].sort((a, b) =>
+    sortOrder === "cvss" ? (cvssValue(b) ?? -1) - (cvssValue(a) ?? -1) || b.score - a.score : b.score - a.score
+  ), [visibleGroupFindings, sortOrder]);
+  const navigationFindings = listView === "cves" ? rankedFindings : visibleGroupFindings;
 
   useEffect(() => {
     if (!selectedId) return;
@@ -210,7 +215,7 @@ export function FindingsPanel({
   // New result or filter change: stay at the top of the findings panel.
   useEffect(() => {
     skipAutoScroll.current = true;
-    setShowAll(false);
+    setShowAll(true);
     const root = listRef.current;
     if (!root) return;
     root.scrollTo({ top: 0 });
@@ -244,23 +249,27 @@ export function FindingsPanel({
       ref={listRef}
       tabIndex={0}
       onKeyDown={(e) => {
-        if (!visibleGroupFindings.length) return;
-        const idx = visibleGroupFindings.findIndex((f) => f.cve_id === selectedId);
+        if (!navigationFindings.length) return;
+        const idx = navigationFindings.findIndex((f) => f.cve_id === selectedId);
         if (e.key === "ArrowDown") {
           e.preventDefault();
-          const next = visibleGroupFindings[Math.min(visibleGroupFindings.length - 1, Math.max(0, idx) + 1)];
+          const next = navigationFindings[Math.min(navigationFindings.length - 1, Math.max(0, idx) + 1)];
           if (next) onSelect(next);
         } else if (e.key === "ArrowUp") {
           e.preventDefault();
-          const prev = visibleGroupFindings[Math.max(0, (idx < 0 ? 0 : idx) - 1)];
+          const prev = navigationFindings[Math.max(0, (idx < 0 ? 0 : idx) - 1)];
           if (prev) onSelect(prev);
         } else if (e.key === "Enter" && selectedId) {
-          const cur = visibleGroupFindings.find((f) => f.cve_id === selectedId);
+          const cur = navigationFindings.find((f) => f.cve_id === selectedId);
           if (cur) onSelect(cur);
         }
       }}
     >
+      <div className="queue-opening"><p className="queue-eyebrow">The vulnerability lineup</p><h3>Highest severity. First in view.</h3><p>Start with CVSS, then use exposure, IBM fixes, and your local evidence to decide what happens next.</p></div>
       <div className="findings-focus-bar">
+        <label className="queue-select">View
+          <select value={listView} onChange={(event) => setListView(event.target.value)}><option value="cves">CVSS score listing</option><option value="bulletins">Group by bulletin</option></select>
+        </label>
         <label className="queue-select">Sort by
           <select value={sortOrder} onChange={(event) => setSortOrder(event.target.value)}>
             <option value="cvss">CVSS · highest first</option>
@@ -334,7 +343,22 @@ export function FindingsPanel({
         {olderHidden > 0 ? ` · ${olderHidden} older hidden` : ""}
         {" · ↑↓ to move"}
       </div>
-      {visibleGroups.map((group) => {
+      {listView === "cves" ? <div className="cvss-lineup" aria-label="Ranked vulnerability list">
+        {rankedFindings.map((finding, index) => <button
+          key={finding.cve_id}
+          type="button"
+          data-cve={finding.cve_id}
+          aria-pressed={selectedId === finding.cve_id}
+          className={`cvss-lineup-row ${selectedId === finding.cve_id ? "selected" : ""}`}
+          onClick={() => onSelect(finding)}
+        >
+          <span className="lineup-rank" aria-label={`Position ${index + 1}`}>{String(index + 1).padStart(2, "0")}</span>
+          <CvssScore finding={finding} />
+          <span className="lineup-description"><span className="cve-id">{finding.cve_id}</span><span className="finding-title">{finding.title}</span><span className="finding-meta">{shortDate(finding.published) || "Date unavailable"} · Triage {finding.score.toFixed(0)}{finding.epss != null ? ` · EPSS ${(finding.epss * 100).toFixed(1)}%` : ""}</span></span>
+          <span className="lineup-signals badges"><span className={`badge ${finding.bucket}`}>{finding.bucket}</span>{finding.on_kev && <span className="badge kev">KEV</span>}{finding.action_lane && <span className={`badge badge-lane lane-${finding.action_lane}`}>{finding.action_lane}</span>}{hasPtfEvidence(finding) && <span className="badge badge-ptf">PTF</span>}{pasteHitIds.includes(finding.cve_id) && <span className="badge badge-paste">paste match</span>}{bulletinIndex.get(finding.bulletin_id || "")?.change_status === "new" && <span className="badge kev">New snapshot</span>}{bulletinIndex.get(finding.bulletin_id || "")?.change_status === "modified" && <span className="badge badge-ptf">Remediation updated</span>}</span>
+          <span className="lineup-open">Review issue →</span>
+        </button>)}
+      </div> : visibleGroups.map((group) => {
         const isExpanded = expanded.has(group.id);
         const lead = group.findings.reduce((best, finding) => finding.score > best.score ? finding : best, group.findings[0]);
         const cvssLead = group.findings.reduce((best, finding) => (cvssValue(finding) ?? -1) > (cvssValue(best) ?? -1) ? finding : best, group.findings[0]);

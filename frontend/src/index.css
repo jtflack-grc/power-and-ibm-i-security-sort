@@ -2638,3 +2638,39 @@ iframe:focus-visible {
 .cvss-vector { margin: 12px 0; color: var(--muted); font-size: 12px; }
 .cvss-vector summary { cursor: pointer; }
 .cvss-vector code { display: block; margin-top: 8px; overflow-wrap: anywhere; }
+
+/* Lead with the ranked list, then follow the selected issue into its evidence. */
+body:has(.cvss-first-layout) { overflow: auto; }
+.cvss-first-layout { height: auto; min-height: 100%; }
+.cvss-first-layout .panel-grid { grid-template-columns: minmax(300px, .9fr) minmax(460px, 1.1fr); align-items: start; }
+.cvss-first-layout .findings-panel-shell { grid-column: 1 / -1; border-right: 0; border-bottom: 1px solid var(--line); }
+.cvss-first-layout .panel-body { overflow: visible; }
+.cvss-first-layout .findings-panel-shell > .panel-body { padding: 1.5rem clamp(.75rem, 3vw, 3rem) 2rem; }
+.cvss-first-layout .issue-panel-shell, .cvss-first-layout .evidence-panel-shell { min-width: 0; }
+.cvss-first-layout #issue-workbench:focus { outline: 2px solid var(--green); outline-offset: -2px; }
+.queue-opening { padding: .25rem 0 1.25rem; }
+.queue-eyebrow { color: var(--green); font: .7rem "IBM Plex Mono", monospace; text-transform: uppercase; letter-spacing: .12em; margin: 0 0 .5rem; }
+.queue-opening h3 { font-size: clamp(1.65rem, 3vw, 2.75rem); line-height: 1.1; letter-spacing: -.04em; margin: 0 0 .65rem; }
+.queue-opening > p:last-child { color: var(--muted); font-size: .9rem; margin: 0; max-width: 75ch; }
+.cvss-lineup { border-top: 1px solid var(--line); max-height: 70vh; overflow: auto; }
+.cvss-lineup-row { width: 100%; display: grid; grid-template-columns: 2.5rem 6.5rem minmax(0, 1fr) minmax(110px, 180px) 7rem; align-items: center; gap: 1.5rem; border: 0; border-bottom: 1px solid var(--line); padding: 1.25rem .75rem; background: transparent; color: var(--white); text-align: left; cursor: pointer; }
+.cvss-lineup-row:hover, .cvss-lineup-row.selected { background: rgba(111,217,154,.05); }
+.cvss-lineup-row.selected { box-shadow: inset 3px 0 0 var(--green); }
+.cvss-lineup-row:focus-visible { outline: 2px solid var(--green); outline-offset: -2px; }
+.lineup-rank { font: .8rem "IBM Plex Mono", monospace; color: var(--muted); }
+.cvss-lineup-row .cvss-score { align-items: flex-start; }
+.cvss-lineup-row .cvss-score strong { font-size: 2rem; white-space: nowrap; }
+.lineup-description { display: grid; gap: .4rem; min-width: 0; }
+.lineup-description .finding-title { max-width: 80ch; overflow-wrap: anywhere; }
+.lineup-signals { justify-content: flex-start; }
+.lineup-open { font-size: .75rem; color: var(--green); text-align: right; }
+@media (max-width: 980px) {
+  .cvss-first-layout .panel-grid { grid-template-columns: minmax(0, 1fr); }
+  .cvss-first-layout .panel { min-height: 0; }
+  .cvss-lineup-row { grid-template-columns: 1.5rem 5rem minmax(0, 1fr); gap: .75rem; padding: 1rem .5rem; }
+  .cvss-lineup-row .cvss-score strong { font-size: 1.6rem; }
+  .cvss-lineup-row .cvss-score small { font-size: 9px; }
+  .lineup-signals { grid-column: 3; }
+  .lineup-open { grid-column: 3; text-align: left; }
+  .cvss-first-layout .panel-head { flex-wrap: wrap; }
+}
