@@ -1,3 +1,4 @@
+import { CvssScore } from "./CvssScore";
 import { useEffect, useState } from "react";
 import type { Bulletin, Finding } from "../types";
 import { PLATFORM_LABELS } from "../types";
@@ -121,7 +122,7 @@ export function IssueDetailPanel({ finding, shop, bulletin, generatedAt }: Props
       <div className="issue-hero">
         <div className="finding-top">
           <span className="cve-id">{finding.cve_id}</span>
-          <span className={`badge ${finding.bucket}`}>{finding.bucket}</span>
+          <CvssScore finding={finding} />
         </div>
       </div>
 
@@ -130,11 +131,13 @@ export function IssueDetailPanel({ finding, shop, bulletin, generatedAt }: Props
         <div className="badges">
           {finding.on_kev && <span className="badge kev">KEV</span>}
           {finding.action_lane && <span className={`badge badge-lane lane-${finding.action_lane}`}>{finding.action_lane}</span>}
-          {finding.cvss_score != null && <span className="badge">CVSS {finding.cvss_score}</span>}
+          <span className={`badge ${finding.bucket}`}>Triage {finding.score.toFixed(0)} · {finding.bucket}</span>
           {finding.epss != null && <span className="badge">EPSS {(finding.epss * 100).toFixed(1)}%</span>}
           {finding.platforms.map((p) => <span key={p.platform} className="badge badge-platform">{PLATFORM_LABELS[p.platform]}</span>)}
         </div>
       </div>
+
+      {finding.cvss_vector && <details className="cvss-vector"><summary>CVSS vector</summary><code>{finding.cvss_vector}</code></details>}
 
       <section className="decision-glance" aria-label="Decision at a glance">
         <h3>Decision at a glance</h3>
