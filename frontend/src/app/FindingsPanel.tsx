@@ -13,6 +13,7 @@ interface Props {
   laneFilter: ActionLane | "all";
   onLaneFilter: (lane: ActionLane | "all") => void;
   pasteHitIds?: string[];
+  contextLabels?: Record<string, string>;
 }
 
 const BUCKETS: Array<Bucket | "all"> = ["all", "urgent", "watch", "low"];
@@ -53,6 +54,7 @@ export function FindingsPanel({
   laneFilter,
   onLaneFilter,
   pasteHitIds = [],
+  contextLabels = {},
 }: Props) {
   const [sortOrder, setSortOrder] = useState("cvss");
   const [bucket, setBucket] = useState<Bucket | "all">("all");
@@ -249,6 +251,7 @@ export function FindingsPanel({
       ref={listRef}
       tabIndex={0}
       onKeyDown={(e) => {
+        if (e.target instanceof HTMLSelectElement || e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
         if (!navigationFindings.length) return;
         const idx = navigationFindings.findIndex((f) => f.cve_id === selectedId);
         if (e.key === "ArrowDown") {
@@ -354,7 +357,8 @@ export function FindingsPanel({
         >
           <span className="lineup-rank" aria-label={`Position ${index + 1}`}>{String(index + 1).padStart(2, "0")}</span>
           <CvssScore finding={finding} />
-          <span className="lineup-description"><span className="cve-id">{finding.cve_id}</span><span className="finding-title">{finding.title}</span><span className="finding-meta">{shortDate(finding.published) || "Date unavailable"} · Triage {finding.score.toFixed(0)}{finding.epss != null ? ` · EPSS ${(finding.epss * 100).toFixed(1)}%` : ""}</span></span>
+          <span className="lineup-description"><span className="cve-id">{finding.cve_id}</span><span className="finding-title">{finding.title}</span><span className="finding-meta">{shortDate(finding.published) || "Date unavailable"} · Triage {finding.score.toFixed(0)}{finding.epss != null ? ` · EPSS ${(finding.epss * 100).toFixed(1)}%` : ""}</span>
+          <span className="context-list-label">{contextLabels[finding.cve_id] || "IBM i context · Not assessed"}</span></span>
           <span className="lineup-signals badges"><span className={`badge ${finding.bucket}`}>{finding.bucket}</span>{finding.on_kev && <span className="badge kev">KEV</span>}{finding.action_lane && <span className={`badge badge-lane lane-${finding.action_lane}`}>{finding.action_lane}</span>}{hasPtfEvidence(finding) && <span className="badge badge-ptf">PTF</span>}{pasteHitIds.includes(finding.cve_id) && <span className="badge badge-paste">paste match</span>}{bulletinIndex.get(finding.bulletin_id || "")?.change_status === "new" && <span className="badge kev">New snapshot</span>}{bulletinIndex.get(finding.bulletin_id || "")?.change_status === "modified" && <span className="badge badge-ptf">Remediation updated</span>}</span>
           <span className="lineup-open">Review issue →</span>
         </button>)}
@@ -379,7 +383,7 @@ export function FindingsPanel({
               const selected = selectedId === f.cve_id;
               return <button key={f.cve_id} type="button" data-cve={f.cve_id} className={`finding-row finding-row-child ${selected ? "selected" : ""}`} onClick={() => onSelect(f)}>
                 <div className="finding-top"><span className="cve-id">{f.cve_id}</span><CvssScore finding={f} /></div>
-                <div className="finding-meta"><span>Triage {f.score.toFixed(0)}</span>{f.epss != null && <span>EPSS {(f.epss * 100).toFixed(1)}%</span>}<span className={`badge ${f.bucket}`}>{f.bucket}</span>{f.action_lane && <span className={`badge badge-lane lane-${f.action_lane}`}>{f.action_lane}</span>}{hasPtfEvidence(f) && <span className="badge badge-ptf">PTF</span>}{pasteHitIds.includes(f.cve_id) && <span className="badge badge-paste">paste match</span>}</div>
+                <div className="finding-meta"><span>Triage {f.score.toFixed(0)}</span><span>{contextLabels[f.cve_id] || "IBM i context · Not assessed"}</span>{f.epss != null && <span>EPSS {(f.epss * 100).toFixed(1)}%</span>}<span className={`badge ${f.bucket}`}>{f.bucket}</span>{f.action_lane && <span className={`badge badge-lane lane-${f.action_lane}`}>{f.action_lane}</span>}{hasPtfEvidence(f) && <span className="badge badge-ptf">PTF</span>}{pasteHitIds.includes(f.cve_id) && <span className="badge badge-paste">paste match</span>}</div>
               </button>;
             })}</div>}
           </section>

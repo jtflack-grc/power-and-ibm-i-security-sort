@@ -71,6 +71,7 @@ jobs:
           test -s LICENSE
           test -s frontend/public/ironterm/LICENSE
           test -s frontend/public/ironterm/UPSTREAM_COMMIT
+          test -s frontend/public/licenses/js-cvss-MIT.txt
 
       - name: Run backend tests
         env:
@@ -90,6 +91,10 @@ jobs:
       - name: Audit production dependencies
         working-directory: frontend
         run: npm audit --omit=dev --audit-level=high
+
+      - name: Test contextual assessment safeguards
+        working-directory: frontend
+        run: npm run test:context
 
       - name: Type-check static SPA
         working-directory: frontend

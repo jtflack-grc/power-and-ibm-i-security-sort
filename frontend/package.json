@@ -7,9 +7,11 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:context": "vite build --config vite.context-test.config.ts && node --test .context-tests/context-tests.mjs"
   },
   "dependencies": {
+    "@pandatix/js-cvss": "0.4.4",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },

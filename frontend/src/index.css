@@ -303,6 +303,46 @@ a {
 
 }
 
+/* Local IBM i context complements the published CVSS score. */
+.context-panel { margin: 1.25rem 0; padding: 1rem; border: 1px solid var(--line); background: #080e0b; }
+.context-heading { display: flex; align-items: start; justify-content: space-between; flex-wrap: wrap; gap: .75rem; }
+.context-heading h3 { margin: .3rem 0 1rem; font-size: 1.2rem; }
+.context-heading .badge { white-space: nowrap; }
+.context-result { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; padding: 1rem 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.context-result > div { display: grid; gap: .35rem; min-width: 0; }
+.context-result span, .context-result small { color: var(--muted); font-size: .75rem; }
+.context-result strong { color: var(--green); font-size: 1.6rem; font-variant-numeric: tabular-nums; line-height: 1.2; }
+.context-result strong.context-disposition { font-size: 1rem; }
+.context-panel p { font-size: .85rem; line-height: 1.5; }
+.context-muted { color: var(--muted); }
+.context-list-label { color: var(--green); font-size: .7rem; }
+.context-editor { padding: .85rem 0; border-bottom: 1px solid var(--line); }
+.context-editor > summary { color: var(--green); cursor: pointer; font-size: .85rem; }
+.context-panel label { display: grid; gap: .3rem; color: var(--muted); font-size: .75rem; margin: .5rem 0; min-width: 0; }
+.context-panel input, .context-panel textarea, .context-panel select { width: 100%; min-width: 0; padding: .55rem; border: 1px solid var(--line); border-radius: 0; color: var(--white); background: #030604; font: inherit; font-size: .8rem; }
+.context-panel input:focus, .context-panel textarea:focus, .context-panel select:focus { outline: 1px solid var(--green); }
+.context-panel input[type="date"] { color-scheme: dark; }
+.context-fields, .context-evidence-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem .8rem; }
+.context-wide { grid-column: 1 / -1; }
+.context-dimension { padding: .8rem 0; border-top: 1px solid var(--line); }
+.context-dimension summary { display: flex; justify-content: space-between; gap: .5rem; cursor: pointer; font-size: .8rem; }
+.context-dimension summary span { color: var(--muted); font-size: .7rem; }
+.context-toolbar { display: flex; align-items: end; flex-wrap: wrap; gap: .65rem; margin-top: .8rem; }
+.context-toolbar label { flex: 1 1 200px; }
+.context-toolbar .button { white-space: normal; font-size: .7rem; }
+.context-metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .4rem .8rem; }
+.context-gaps { padding: .75rem; background: rgba(212,160,69,.06); border-left: 2px solid var(--amber); color: var(--muted); font-size: .8rem; margin: .75rem 0; }
+.context-gaps h4 { color: var(--white); margin: 0 0 .5rem; }
+.context-gaps ul { padding-left: 1rem; margin: 0; }
+.context-error { color: #ffabab; font-size: .8rem; }
+.context-calculation code { display: block; overflow-wrap: anywhere; font-size: .7rem; color: var(--muted); }
+.context-sources { padding-left: 1rem; font-size: .8rem; }
+.context-sources p { margin: .2rem 0 .8rem; color: var(--muted); }
+@media (max-width: 520px) {
+  .context-panel { padding: .75rem; }
+  .context-result, .context-fields, .context-evidence-fields, .context-metrics { grid-template-columns: minmax(0, 1fr); }
+}
+
 /* Findings */
 .findings-filters {
   display: flex;
